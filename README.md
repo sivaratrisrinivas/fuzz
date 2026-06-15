@@ -31,7 +31,7 @@ It is built to be:
 
 5. "Play again" wipes the round from your browser. The server forgets the data immediately after the AI call finishes.
 
-Current state: The browser game shell and backend coordinator are in place. The instructions for the remote AI model (four clear stages) were finalized and tested on development tools in an earlier slice. The full client-side real-time damage simulation, live Rewriting, and precise capture of your fixes at the right moments (the playable Endless Fight with Fresh Clues) are now implemented and runnable in the browser. The connection to the live AI model (thin helper + one call) is being built next.
+Current state: The browser game shell and backend coordinator are in place. The instructions for the remote AI model (four clear stages) were finalized and tested on development tools in an earlier slice. The full client-side real-time damage simulation, live Rewriting, and precise capture of your fixes at the right moments (the playable Endless Fight with Fresh Clues for Perfect Help) are now implemented and runnable in the browser via the deep Fuzz Simulator (issue #4 complete). The connection to the live AI model (thin helper + one call) is being built next.
 
 ## Run locally (current development shells)
 
