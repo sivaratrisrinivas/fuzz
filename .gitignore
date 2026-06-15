@@ -1,0 +1,74 @@
+# Fuzz - live fight box (Bun + TS) and thin helper (Python) per ADR-0001, PRD #1, issue #2
+# See CONTEXT.md for all glossary. No private Memory or data is ever persisted.
+
+# Bun / TypeScript (live fight box)
+box/node_modules/
+box/.bun/
+box/bun.lock
+box/bun.lockb
+box/dist/
+box/.cache/
+*.tsbuildinfo
+
+# Python (thin helper)
+helper/__pycache__/
+helper/*.py[cod]
+helper/*$py.class
+helper/.Python
+helper/build/
+helper/develop-eggs/
+helper/dist/
+helper/downloads/
+helper/eggs/
+helper/.eggs/
+helper/lib/
+helper/lib64/
+helper/parts/
+helper/sdist/
+helper/var/
+helper/wheels/
+helper/*.egg-info/
+helper/.installed.cfg
+helper/*.egg
+helper/venv/
+helper/ENV/
+helper/env/
+helper/.env
+helper/.venv
+helper/pip-log.txt
+helper/pip-delete-this-directory.txt
+helper/.tox/
+helper/.coverage
+helper/.coverage.*
+helper/.cache
+helper/nosetests.xml
+helper/coverage.xml
+helper/*.cover
+helper/*.py,cover
+helper/.hypothesis/
+helper/.pytest_cache/
+helper/pytestdebug.log
+
+# OS / editors
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-*
+
+# Env / secrets (never commit)
+.env
+.env.local
+*.pem
+*.key
+
+# Temp / logs from dev runs
+tmp/
+*.log
+/tmp/fuzz-box-server.log
+
+# Worktrees / local
+.worktrees/

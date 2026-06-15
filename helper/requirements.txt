@@ -1,0 +1,11 @@
+# Thin helper (Python) requirements for the Fuzz game per ADR-0001.
+# The thin helper computer is a coordinator only: receives final Fuzz + Fresh Clues at end of the Endless Fight from the live fight box,
+# constructs the prompt for the Smart Robot (using Training reminder + exact 4 Cleaning Steps), makes one call, parses results, returns them, then immediately forgets everything.
+# No private Memory is ever sent or stored. Player rounds use dedicated nvidia-l4; dev iteration uses ZeroGPU/Pro.
+# Test harness uses pytest (listed); basic skeleton may exercise with unittest or pytest.
+# See parent PRD #1, issue #2, issue #5, handoff, ADR-0001, CONTEXT.md.
+
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pytest>=8.0
+httpx>=0.27

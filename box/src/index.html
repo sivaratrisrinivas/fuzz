@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fuzz — Feeling Science • Real Experience • Word Lesson</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; }
+    .glossary-term { font-weight: 600; }
+    .view { display: none; }
+    .view.active { display: block; }
+    .fuzz-example { font-family: ui-monospace, monospace; background: #111; color: #aaa; padding: 1rem; border-radius: 0.5rem; white-space: pre-wrap; line-height: 1.4; }
+    .sand { background: linear-gradient(#f5e8c7, #e8d5a3); }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+  <div class="max-w-4xl mx-auto p-6">
+    <!-- Header -->
+    <header class="mb-8">
+      <div class="flex items-center gap-3">
+        <div class="text-4xl">🏜️</div>
+        <div>
+          <h1 class="text-4xl font-bold tracking-tight">Fuzz</h1>
+          <p class="text-emerald-400 text-sm">The Feeling Science • The Word Lesson • The Real Experience</p>
+        </div>
+      </div>
+      <p class="mt-3 max-w-prose text-zinc-400">
+        Write a <span class="glossary-term">Memory</span>. Watch <span class="glossary-term">Dissolving</span> slowly turn it into <span class="glossary-term">Fuzz</span> through <span class="glossary-term">The Waves</span> at different <span class="glossary-term">Fuzz Levels</span>. Keep <span class="glossary-term">Rewriting</span> during the <span class="glossary-term">Endless Fight</span> to leave good <span class="glossary-term">Clues</span> and especially <span class="glossary-term">Fresh Clues</span> at the exact right time for <span class="glossary-term">Perfect Help</span>. At the end the <span class="glossary-term">Smart Robot</span> performs <span class="glossary-term">Reconstructing</span> using its <span class="glossary-term">Training</span> and exactly <span class="glossary-term">4 Cleaning Steps</span>, producing a <span class="glossary-term">Reconstructed Memory</span> that shows a visible <span class="glossary-term">Quiet Rewrite</span> (Creative Guessing, not an <span class="glossary-term">Exact Copy</span>). You feel the <span class="glossary-term">Real Experience</span> and learn the <span class="glossary-term">Feeling Lesson</span>. It all feels like the <span class="glossary-term">Sand Drawing</span>.
+      </p>
+      <div class="mt-2 text-[10px] text-zinc-500">Shell only — per issue #2. References: PRD #1, /tmp/handoff-fuzz-prd.md, ADR-0001, CONTEXT.md (full glossary). No logic implemented yet.</div>
+    </header>
+
+    <!-- View switcher (demo only — shows the four placeholder views) -->
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button onclick="showView('memory')" class="px-4 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 active:bg-emerald-900 text-sm">1. Enter Memory (start)</button>
+      <button onclick="showView('fight')" class="px-4 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 active:bg-emerald-900 text-sm">2. Endless Fight (The Waves)</button>
+      <button onclick="showView('reconstructing')" class="px-4 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 active:bg-emerald-900 text-sm">3. Reconstructing (4 Cleaning Steps)</button>
+      <button onclick="showView('reveal')" class="px-4 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 active:bg-emerald-900 text-sm">4. Reveal (Quiet Rewrite)</button>
+    </div>
+
+    <!-- 1. Memory entry view -->
+    <div id="view-memory" class="view active border border-zinc-800 rounded-xl p-6 bg-zinc-900">
+      <h2 class="font-semibold text-xl mb-2">Enter your <span class="glossary-term">Memory</span></h2>
+      <p class="text-sm text-zinc-400 mb-3">This is the private text that will be the subject of the <span class="glossary-term">Sand Drawing</span>. The <span class="glossary-term">live fight box</span> keeps the original <span class="glossary-term">Memory</span> locally only (for accurate <span class="glossary-term">Dissolving</span> simulation and <span class="glossary-term">Fresh Clues</span> timing). The <span class="glossary-term">thin helper</span> and <span class="glossary-term">Smart Robot</span> never see it.</p>
+      <textarea class="w-full h-32 p-3 bg-black border border-zinc-700 rounded font-mono text-sm" placeholder="Type your private Memory here... (example: a short story or description you want the Smart Robot to reconstruct from Fuzz)"></textarea>
+      <div class="mt-3">
+        <button onclick="showView('fight')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-medium">Begin the Endless Fight →</button>
+      </div>
+    </div>
+
+    <!-- 2. Endless Fight view (placeholder) -->
+    <div id="view-fight" class="view border border-zinc-800 rounded-xl p-6 bg-zinc-900">
+      <h2 class="font-semibold text-xl mb-2">The <span class="glossary-term">Endless Fight</span></h2>
+      <p class="text-sm text-zinc-400 mb-4"><span class="glossary-term">Dissolving</span> has begun. <span class="glossary-term">The Waves</span> are coming. You must keep <span class="glossary-term">Rewriting</span> to leave <span class="glossary-term">Clues</span> and <span class="glossary-term">Fresh Clues</span> at the exact right <span class="glossary-term">Fuzz Level</span> for <span class="glossary-term">Perfect Help</span>.</p>
+
+      <div class="mb-2 text-xs uppercase tracking-widest text-amber-400">Current Fuzz (example at a low Fuzz Level)</div>
+      <div class="fuzz-example">The old o*k tr*e by the ri*er had stood for c*ntur**s. Its *oots drank from the **ow stream that wound through the vall*y like a **lver thread. Birds nested in its high branch*s and children played under its shade in summer. Every aut*mn its leaves turned the color of fire before they fell.</div>
+
+      <div class="mt-4 flex items-center gap-4">
+        <div class="text-sm"><span class="glossary-term">Fuzz Level</span>: <span class="font-mono">2 / 12</span></div>
+        <div class="flex-1 h-1 bg-zinc-800 rounded"><div class="h-1 w-[16%] bg-amber-400 rounded"></div></div>
+      </div>
+
+      <div class="mt-4">
+        <label class="text-xs text-zinc-400 block mb-1">Rewrite here (to leave good Clues and Fresh Clues at the right moment)</label>
+        <textarea class="w-full h-20 p-3 bg-black border border-zinc-700 rounded font-mono text-sm" disabled placeholder="In the real box you would type and fix letters while The Waves continue... (placeholder — no Rewriting logic in this shell)"></textarea>
+      </div>
+
+      <div class="mt-4 flex gap-3">
+        <button onclick="showView('reconstructing')" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 rounded font-medium">Stop the Endless Fight and begin Reconstructing →</button>
+        <button onclick="showView('memory')" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-sm">Back</button>
+      </div>
+      <p class="mt-3 text-[10px] text-zinc-500">This is a placeholder view only. The live fight box will own the real-time <span class="glossary-term">Dissolving</span>, wave timing, and <span class="glossary-term">Fresh Clues</span> capture (for <span class="glossary-term">Perfect Help</span>).</p>
+    </div>
+
+    <!-- 3. Reconstructing / waiting view (4 Cleaning Steps) -->
+    <div id="view-reconstructing" class="view border border-zinc-800 rounded-xl p-6 bg-zinc-900">
+      <h2 class="font-semibold text-xl mb-2">Reconstructing — the <span class="glossary-term">Smart Robot</span> performs the <span class="glossary-term">4 Cleaning Steps</span></h2>
+      <p class="text-sm text-zinc-400 mb-4">The <span class="glossary-term">live fight box</span> sent only the final <span class="glossary-term">Fuzz</span> + the list of <span class="glossary-term">Fresh Clues</span> (with position/spot, words, and <span class="glossary-term">Fuzz Level</span> when given). The <span class="glossary-term">thin helper</span> will call the <span class="glossary-term">Smart Robot</span> once. The <span class="glossary-term">Smart Robot</span> uses its <span class="glossary-term">Training</span> + the <span class="glossary-term">Clues</span> + <span class="glossary-term">Fresh Clues</span> for a <span class="glossary-term">Best Guess</span> via <span class="glossary-term">Creative Guessing</span>.</p>
+
+      <div class="space-y-4">
+        <div class="p-4 bg-zinc-950 border border-zinc-800 rounded">
+          <div class="text-emerald-400 text-sm font-medium mb-1">Step 1 of 4 — in progress (placeholder)</div>
+          <div class="text-xs">Start with the strongest <span class="glossary-term">Fresh Clues</span>. Put back the clearest words and short phrases first, in their right spots.</div>
+          <div class="mt-2 text-[10px] text-emerald-300/70">Result after step 1 (example): "The old oak tree by the river had stood for centuries. Its roots drank from the slow stream..."</div>
+        </div>
+        <div class="p-4 bg-zinc-950 border border-zinc-800 rounded opacity-60">
+          <div class="text-emerald-400 text-sm font-medium mb-1">Step 2 of 4</div>
+          <div class="text-xs">Look at the <span class="glossary-term">Clues</span> still left in the <span class="glossary-term">Fuzz</span>. Fill in more letters and words around the ones you already fixed.</div>
+        </div>
+        <div class="p-4 bg-zinc-950 border border-zinc-800 rounded opacity-60">
+          <div class="text-emerald-400 text-sm font-medium mb-1">Step 3 of 4</div>
+          <div class="text-xs">The <span class="glossary-term">Fuzz</span> is still very messy in places. Use <span class="glossary-term">Training</span> to guess the rest of the <span class="glossary-term">Memory</span>. Make small changes where it feels right for a real <span class="glossary-term">Memory</span>.</div>
+        </div>
+        <div class="p-4 bg-zinc-950 border border-zinc-800 rounded opacity-60">
+          <div class="text-emerald-400 text-sm font-medium mb-1">Step 4 of 4 — the quiet pass</div>
+          <div class="text-xs">Do one last quiet pass over the whole thing. Clean up the flow and meaning. This is where most of the <span class="glossary-term">Quiet Rewrite</span> happens — change a few words or phrases so it is not an <span class="glossary-term">Exact Copy</span>.</div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <button onclick="showView('reveal')" class="px-5 py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium">See the Reconstructed Memory and Quiet Rewrite →</button>
+      </div>
+      <p class="mt-3 text-[10px] text-zinc-500">In the real game the steps will appear progressively with short pauses as the single <span class="glossary-term">Smart Robot</span> call returns the marked intermediate results. This teaches the slow clean-up <span class="glossary-term">Sand Drawing</span> metaphor and the <span class="glossary-term">Feeling Lesson</span>.</p>
+    </div>
+
+    <!-- 4. Reveal view -->
+    <div id="view-reveal" class="view border border-zinc-800 rounded-xl p-6 bg-zinc-900">
+      <h2 class="font-semibold text-xl mb-2">The <span class="glossary-term">Reconstructed Memory</span> and the <span class="glossary-term">Quiet Rewrite</span></h2>
+      <p class="text-sm text-zinc-400 mb-4">Side-by-side comparison. The <span class="glossary-term">live fight box</span> kept your original <span class="glossary-term">Memory</span> locally and uses it only for highlighting the differences (the <span class="glossary-term">Quiet Rewrite</span>). The <span class="glossary-term">thin helper</span> never received the full original.</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs uppercase mb-1 text-zinc-400">Your original <span class="glossary-term">Memory</span> (local only)</div>
+          <div class="p-4 bg-black border border-zinc-700 rounded text-sm">The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell.</div>
+        </div>
+        <div>
+          <div class="text-xs uppercase mb-1 text-zinc-400"><span class="glossary-term">Reconstructed Memory</span> (Smart Robot Best Guess)</div>
+          <div class="p-4 bg-black border border-emerald-900/60 rounded text-sm">The ancient oak tree by the slow river had stood for centuries. Its roots drank from the gentle stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.</div>
+          <div class="mt-2 text-[10px] text-emerald-400">Highlighted changes (Quiet Rewrite) would appear here in the real reveal. The Smart Robot used Creative Guessing + your Fresh Clues.</div>
+        </div>
+      </div>
+
+      <div class="mt-4 p-4 border border-amber-900/40 bg-amber-950/30 rounded text-sm">
+        <span class="font-medium">The Feeling Lesson:</span> The <span class="glossary-term">Smart Robot</span> did not make an <span class="glossary-term">Exact Copy</span>. It used its <span class="glossary-term">Training</span> and the <span class="glossary-term">Fresh Clues</span> you gave it at the exact right <span class="glossary-term">Fuzz Levels</span> during <span class="glossary-term">Rewriting</span> to make a <span class="glossary-term">Best Guess</span> through <span class="glossary-term">Creative Guessing</span>. This is the <span class="glossary-term">Quiet Rewrite</span>. The <span class="glossary-term">Rewriting</span> gave <span class="glossary-term">Perfect Help</span>. You lived the <span class="glossary-term">Real Experience</span> of the <span class="glossary-term">Feeling Science</span> through the <span class="glossary-term">Watch and Fight Way</span>.
+      </div>
+
+      <div class="mt-5">
+        <button onclick="resetAll()" class="px-6 py-2.5 bg-white text-black font-semibold rounded hover:bg-zinc-100">Play again — start a completely new Memory</button>
+        <span class="ml-3 text-xs text-zinc-500">Instant full clear. Nothing is stored anywhere.</span>
+      </div>
+    </div>
+
+    <footer class="mt-10 text-[10px] text-zinc-500">
+      This is the live fight box shell (Bun + TypeScript) + thin helper (Python) scaffolding from issue #2. 
+      See acceptance criteria in https://github.com/sivaratrisrinivas/fuzz/issues/2. 
+      Next slices will add the deep Fuzz Simulator (client), Reconstruct Coordinator, one-call integration, progressive UX, Reveal Comparator, and E2E resilience.
+      Everything uses the locked glossary from CONTEXT.md.
+    </footer>
+  </div>
+
+  <script>
+    function showView(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      const el = document.getElementById('view-' + name);
+      if (el) el.classList.add('active');
+      window.scrollTo({ top: 120, behavior: 'smooth' });
+    }
+    function resetAll() {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-memory').classList.add('active');
+      // In real implementation this would fully clear local Memory, Fuzz, Fresh Clues state.
+      alert("Play again: everything cleared. (Shell placeholder — full reset implemented in later slice per issue #9.)");
+    }
+    // Keyboard hint
+    console.log('%c[Fuzz shell] Views are placeholders only. Glossary terms are strict. See CONTEXT.md', 'color:#555');
+  </script>
+</body>
+</html>

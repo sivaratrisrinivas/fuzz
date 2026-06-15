@@ -1,0 +1,14 @@
+{
+  "name": "fuzz-live-fight-box",
+  "version": "0.1.0",
+  "description": "Live fight box (Bun + TypeScript) shell for the Fuzz game. The player experiences the Feeling Science and Real Experience by writing a Memory, watching Dissolving turn it into Fuzz via The Waves at rising Fuzz Levels during the Endless Fight, Rewriting to leave Clues and Fresh Clues for Perfect Help, then seeing Reconstructing with the 4 Cleaning Steps and Quiet Rewrite by the Smart Robot (Creative Guessing, not Exact Copy). This shell is the foundation; no simulation or logic yet.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/dev-server.ts",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
