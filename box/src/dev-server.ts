@@ -46,8 +46,7 @@ const server = Bun.serve({
     }
 
     return new Response(
-      "Fuzz live fight box shell - placeholder only (see index for the four views). " +
-        "Per issue #2 acceptance: no player flows or deep modules (Fuzz Simulator) implemented yet.",
+      "Fuzz live fight box - see index.html. Per issue #4: the deep Fuzz Simulator + playable Endless Fight (Dissolving, Rewriting, Fresh Clues for Perfect Help) are now live in the browser (client only). Other views remain progressive placeholders.",
       { status: 404, headers: { "Content-Type": "text/plain" } }
     );
   },
