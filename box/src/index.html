@@ -28,7 +28,7 @@
       <p class="mt-3 max-w-prose text-zinc-400">
         Write a <span class="glossary-term">Memory</span>. Watch <span class="glossary-term">Dissolving</span> slowly turn it into <span class="glossary-term">Fuzz</span> through <span class="glossary-term">The Waves</span> at different <span class="glossary-term">Fuzz Levels</span>. Keep <span class="glossary-term">Rewriting</span> during the <span class="glossary-term">Endless Fight</span> to leave good <span class="glossary-term">Clues</span> and especially <span class="glossary-term">Fresh Clues</span> at the exact right time for <span class="glossary-term">Perfect Help</span>. At the end the <span class="glossary-term">Smart Robot</span> performs <span class="glossary-term">Reconstructing</span> using its <span class="glossary-term">Training</span> and exactly <span class="glossary-term">4 Cleaning Steps</span>, producing a <span class="glossary-term">Reconstructed Memory</span> that shows a visible <span class="glossary-term">Quiet Rewrite</span> (Creative Guessing, not an <span class="glossary-term">Exact Copy</span>). You feel the <span class="glossary-term">Real Experience</span> and learn the <span class="glossary-term">Feeling Lesson</span>. It all feels like the <span class="glossary-term">Sand Drawing</span>.
       </p>
-      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Other views are still progressive placeholders. References: PRD #1, issue #4, /tmp/handoff-fuzz-issues.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
+      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Other views progressive. References: PRD #1, issues #4/#5/#6, /tmp/handoff-fuzz-issues.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
     </header>
 
     <!-- View switcher (demo only — shows the four placeholder views) -->
@@ -76,7 +76,7 @@
       <div id="end-data-panel" class="hidden mt-4 p-4 border border-zinc-700 bg-black rounded">
         <div class="text-xs uppercase mb-1 text-zinc-400">Fight ended — data contract (what the box sends; original <span class="glossary-term">Memory</span> stayed here)</div>
         <pre id="end-json" class="text-[11px] overflow-auto max-h-48 p-2 bg-zinc-900 rounded"></pre>
-        <div class="text-[10px] text-emerald-400 mt-1">This + the captured <span class="glossary-term">Fresh Clues</span> at exact <span class="glossary-term">Fuzz Levels</span> gives the <span class="glossary-term">Smart Robot</span> <span class="glossary-term">Perfect Help</span>. Ready for <span class="glossary-term">Reconstructing</span> (next slices).</div>
+        <div class="text-[10px] text-emerald-400 mt-1">This + the captured <span class="glossary-term">Fresh Clues</span> at exact <span class="glossary-term">Fuzz Levels</span> gives the <span class="glossary-term">Smart Robot</span> <span class="glossary-term">Perfect Help</span>. Sent to thin helper for one Smart Robot call (issue #6). Result appears above after round-trip (ephemeral on helper).</div>
       </div>
 
       <p class="mt-3 text-[10px] text-zinc-500">Live client-side <span class="glossary-term">Dissolving</span> + <span class="glossary-term">Rewriting</span> + <span class="glossary-term">Fresh Clues</span> timing (issue #4). Timer applies <span class="glossary-term">The Waves</span>. Edit live to fight back. All in browser (original local only).</p>
@@ -110,7 +110,7 @@
       <div class="mt-4">
         <button onclick="showView('reveal')" class="px-5 py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium">See the Reconstructed Memory and Quiet Rewrite →</button>
       </div>
-      <p class="mt-3 text-[10px] text-zinc-500">In the real game the steps will appear progressively with short pauses as the single <span class="glossary-term">Smart Robot</span> call returns the marked intermediate results. This teaches the slow clean-up <span class="glossary-term">Sand Drawing</span> metaphor and the <span class="glossary-term">Feeling Lesson</span>.</p>
+      <p class="mt-3 text-[10px] text-zinc-500">Stop fight now triggers the single <span class="glossary-term">Smart Robot</span> call in the thin helper (issue #6: one call + immediate forget). The steps will appear progressively (with short pauses) in later UX slices as the marked results return. This teaches the slow clean-up <span class="glossary-term">Sand Drawing</span> metaphor and the <span class="glossary-term">Feeling Lesson</span>.</p>
     </div>
 
     <!-- 4. Reveal view -->
@@ -141,7 +141,7 @@
     </div>
 
     <footer class="mt-10 text-[10px] text-zinc-500">
-      Live fight box (Bun + TypeScript) with deep Fuzz Simulator + playable Endless Fight from issue #4 (client owns Dissolving/The Waves/Fresh Clues timing for Perfect Help; original Memory local only). Thin helper remains shell. See https://github.com/sivaratrisrinivas/fuzz/issues/4 + parent #1. Later slices: Reconstruct Coordinator (#5), integration (#6), UX polish (#7-9), resilience/E2E (#10). Glossary from CONTEXT.md everywhere.
+      Live fight box (Bun + TypeScript) with deep Fuzz Simulator + playable Endless Fight from issue #4 (client owns Dissolving/The Waves/Fresh Clues timing for Perfect Help; original Memory local only). Thin helper now wires one Smart Robot call + immediate ephemeral forget (#6 complete): stop fight sends contract, receives steps + Reconstructed Memory. See https://github.com/sivaratrisrinivas/fuzz/issues/6 + #4 + parent #1. UX polish (#7-9), resilience (#10) next. Glossary from CONTEXT.md everywhere.
     </footer>
   </div>
 
@@ -362,8 +362,25 @@
       const stopBtn = document.getElementById('stop-fight-btn');
       if (stopBtn) stopBtn.disabled = true;
 
-      // For demo: also wire a quick "use this in reconstructing (placeholder)"
-      // (real progressive steps come in #7)
+      // #6: send the exact data contract (final_fuzz + fresh_clues only; original Memory stayed local) to thin helper.
+      // Receives result of exactly one Smart Robot call (4 Cleaning Steps + Reconstructed Memory) with ephemeral forget on helper side.
+      // Handle: append summary to panel (full UX progressive reveal in #7+). Uses relative URL (proxied by dev-server).
+      fetch('/reconstruct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(end),
+      }).then(function (r) { return r.json(); }).then(function (data) {
+        if (pre) {
+          pre.textContent = pre.textContent + '\n\n--- Received from thin helper (one Smart Robot call + ephemeral) ---\n' +
+            JSON.stringify({ reconstructed_memory_preview: (data.reconstructed_memory || '').slice(0, 120) + '...', steps: Object.keys(data.steps || {}) }, null, 2);
+        }
+        // Stash for any follow-on view use (reveal etc. use local original for diff in later slices).
+        window.lastReconstructResult = data;
+        console.log('%c[Fuzz #6] Reconstruct result received from helper (one call, ephemeral).', 'color:#0a0');
+      }).catch(function (e) {
+        if (pre) pre.textContent = pre.textContent + '\n\n(Helper call failed - is thin helper uvicorn running on :8000? See README.)';
+        console.warn('Fuzz #6 helper /reconstruct failed (dev only):', e);
+      });
     }
 
     function resetAll() {

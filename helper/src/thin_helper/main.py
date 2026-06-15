@@ -24,7 +24,7 @@ app = FastAPI(
         "Ephemeral only - forgets all data (Fuzz, Fresh Clues) immediately after the call. "
         "See PRD #1, ADR-0001, CONTEXT.md, issues #2/#5/#6."
     ),
-    version="0.2.0-issue5-deep-coordinator",
+    version="0.3.0-issue6-one-call-ephemeral",
 )
 
 # The Reconstruct Coordinator (deep module, only entrypoint per issue #5) is instantiated here.

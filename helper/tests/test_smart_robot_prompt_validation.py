@@ -18,8 +18,12 @@ class TestSmartRobotPromptValidationArtifacts(unittest.TestCase):
     def setUp(self):
         # Resolve paths relative to this test file so it works from helper/ or repo root.
         self.helper_root = Path(__file__).resolve().parent.parent
+        self.src_dir = self.helper_root / "src"
         self.prompts_dir = self.helper_root / "prompts"
         self.prompt_path = self.prompts_dir / "smart-robot-prompt.txt"
+        import sys
+        if str(self.src_dir) not in sys.path:
+            sys.path.insert(0, str(self.src_dir))
 
     def test_locked_smart_robot_prompt_artifact_exists_with_exact_4_cleaning_steps_and_structure(self):
         # First TDD tracer for issue #3 (behavior 1 from approved plan).

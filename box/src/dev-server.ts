@@ -36,6 +36,22 @@ const server = Bun.serve({
       });
     }
 
+    // #6 wiring: proxy POST /reconstruct to thin helper (localhost:8000 by default).
+    // This lets the live fight box (index.html) send the exact data contract on stopFight via same-origin fetch('/reconstruct')
+    // and receive the structured result (steps + reconstructed_memory) from the one Smart Robot call + ephemeral forget.
+    // (Direct calls to helper also work; proxy for dev convenience / no CORS.)
+    if (pathname === "/reconstruct" && req.method === "POST") {
+      const helperUrl = "http://localhost:8000/reconstruct";
+      const bodyText = await req.text();
+      const helperResp = await fetch(helperUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: bodyText,
+      });
+      const data = await helperResp.json();
+      return Response.json(data, { status: helperResp.status });
+    }
+
     // Future: static assets or API stubs for the box (client-only for now).
     if (pathname === "/health") {
       return Response.json({
