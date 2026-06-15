@@ -1,13 +1,13 @@
 """
 Prompt Constructor (deep module) - thin Python helper.
 
-Per issue #5 (fetched ACs), parent PRD #1, /tmp/handoff-fuzz-issue4-complete.md (and /tmp/handoff-fuzz-issues.md),
+Per issue #5 (fetched ACs), issue #6 (wiring for one Smart Robot call + ephemeral), parent PRD #1, /tmp/handoff-fuzz-issue4-complete.md (and /tmp/handoff-fuzz-issues.md),
 ADR-0001, CONTEXT.md (glossary is gospel), the locked prompt + samples validated in issue #3.
 
 The Prompt Constructor is tested in isolation. It is responsible for always emitting the exact locked prompt text
 (using the authoritative reference artifact from the dev validation slice) with the received final Fuzz and
 Fresh Clues details injected. It guarantees the format is reliably parsable for the 4 Cleaning Steps results
-plus final Reconstructed Memory.
+plus final Reconstructed Memory. The built prompt is fed to exactly one Smart Robot call in the coordinator.
 
 It uses the validated structure and wording:
 - Training reminder + "You are the Smart Robot. You use Creative Guessing..."
@@ -16,7 +16,7 @@ It uses the validated structure and wording:
 - Requirements for Creative Guessing and visible Quiet Rewrite (not an Exact Copy)
 - Request for structured output using the exact === STEP 1 === ... === RECONSTRUCTED MEMORY === markers
 
-The Reconstruct Coordinator (the only entry point) uses this. This module has a small stable public interface
+The Reconstruct Coordinator (the only entry point) uses this for the one-call path. This module has a small stable public interface
 (build_prompt) hiding the template loading + clue formatting details.
 
 All code, identifiers, comments, and tests use ONLY the exact locked glossary terms from CONTEXT.md:
@@ -28,7 +28,7 @@ Exact Copy. No avoided terms.
 Privacy: this receives only final_fuzz + fresh_clues records from the data contract produced by the live fight box.
 The original Memory never leaves the box and is never seen here.
 
-References: https://github.com/sivaratrisrinivas/fuzz/issues/5 , https://github.com/sivaratrisrinivas/fuzz/issues/1 ,
+References: https://github.com/sivaratrisrinivas/fuzz/issues/6 , https://github.com/sivaratrisrinivas/fuzz/issues/5 , https://github.com/sivaratrisrinivas/fuzz/issues/1 ,
 https://github.com/sivaratrisrinivas/fuzz/issues/3 , helper/prompts/smart-robot-prompt.txt (locked),
 helper/prompts/sample-fight-end-data.json , docs/adr/0001-... , CONTEXT.md , the client FightEndData shape.
 """

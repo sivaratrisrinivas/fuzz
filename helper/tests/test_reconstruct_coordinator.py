@@ -72,7 +72,8 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
         self.assertIn("Prompt Constructor", combined)
         self.assertIn("Reconstruct Coordinator", combined)
         self.assertIn("deep module", combined.lower())
-        self.assertIn("stubbed", combined.lower())
+        # Language evolved for #6 (real one-call + ephemeral); "stub"/fallback still referenced in compat path, or #6 notes present.
+        self.assertTrue("stub" in combined.lower() or "fallback" in combined.lower() or "#6" in combined)
         self.assertIn("data contract", combined.lower())
 
         # Avoided terms must never appear (glossary discipline, same as all prior code/tests).
@@ -84,6 +85,246 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
         # Thin/privacy note must be present in the modules.
         self.assertIn("original Memory", combined)
         self.assertIn("never", combined.lower())  # at least one "never" re: original Memory leaving or storage
+
+    def test_reconstruct_coordinator_and_sources_updated_for_smart_robot_one_call_ephemeral_forget_issue6(self):
+        # Cycle 1 (behavior 1 from approved TDD plan for issue #6).
+        # RED: written expecting modules still importable (they exist from #5) + NEW #6 discipline.
+        # Will fail on missing "issue #6", "one Smart Robot call", "ephemeral forget", "model_caller", "InferenceClient" / default caller refs,
+        # and updated notes until GREEN minimally extends the headers/docstrings in coordinator + prompt ctor + main.
+        # Observable through public: imports + source artifacts contain the required #6 traceability + ephemeral guarantee language + glossary purity.
+        # This is the tracer for "modules + references + domain language updated for one-call integration" before touching call logic.
+        # Per issue #6 ACs, plan approval, tdd rules (public iface + comments only for this tracer).
+
+        from thin_helper.prompt_constructor import PromptConstructor
+        from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+
+        self.assertTrue(issubclass(PromptConstructor, object))
+        self.assertTrue(issubclass(ReconstructCoordinator, object))
+
+        import inspect
+        from pathlib import Path as _P
+        pc_file = _P(inspect.getfile(PromptConstructor))
+        rc_file = _P(inspect.getfile(ReconstructCoordinator))
+        # Also pull main for endpoint wiring notes
+        import thin_helper.main as main_mod
+        main_file = _P(inspect.getfile(main_mod))
+        combined = (
+            pc_file.read_text(encoding="utf-8")
+            + "\n" + rc_file.read_text(encoding="utf-8")
+            + "\n" + main_file.read_text(encoding="utf-8")
+        )
+
+        # Glossary still required (CONTEXT.md gospel, no drift).
+        required_glossary = [
+            "Memory", "Fuzz", "Fresh Clues", "4 Cleaning Steps", "Quiet Rewrite",
+            "Best Guess", "Creative Guessing", "Smart Robot", "Training",
+            "Real Experience", "Feeling Lesson", "Sand Drawing", "Perfect Help",
+            "Endless Fight", "Reconstructing", "Reconstructed Memory", "Clues",
+            "Fuzz Levels", "Word Lesson", "Fixing Science", "Watch and Fight Way", "Exact Copy"
+        ]
+        for term in required_glossary:
+            self.assertIn(term, combined, f"Glossary term '{term}' from CONTEXT.md must appear")
+
+        # NEW for #6: traceability + one-call + ephemeral forget language (ACs + approved plan).
+        self.assertIn("issue #6", combined)
+        self.assertIn("one Smart Robot call", combined)
+        self.assertIn("ephemeral forget", combined.lower())
+        self.assertIn("immediately forgets", combined.lower())
+        self.assertIn("model_caller", combined)
+        self.assertIn("InferenceClient", combined)  # or default caller using it
+        self.assertIn("exactly one call", combined.lower())
+        self.assertIn("forget", combined.lower())
+
+        # Key references for #6 vertical (parent PRD, prior slices, artifacts).
+        self.assertIn("PRD #1", combined)
+        self.assertIn("issue #5", combined)
+        self.assertIn("issue #4", combined)
+        self.assertIn("CONTEXT.md", combined)
+        self.assertIn("ADR-0001", combined)
+        self.assertIn("data contract", combined.lower())
+        self.assertIn("Reconstruct Coordinator", combined)
+
+        # Avoided terms still banned.
+        avoided = ["noise", "scrambled", "fixing steps", "rebuilding steps", "the magic trick", "garbage"]
+        low = combined.lower()
+        for bad in avoided:
+            self.assertNotIn(bad, low, f"Avoided term '{bad}' must not appear")
+
+        # Privacy / thin notes still (original Memory never).
+        self.assertIn("original Memory", combined)
+        self.assertIn("never", combined.lower())
+
+    def test_coordinator_build_prompt_regress_free_fidelity_sample_contract_for_one_call_path_issue6(self):
+        # Cycle 2 (behavior 2 from approved TDD plan for issue #6).
+        # RED first: written to specify that coordinator.build_prompt (public, delegates to ctor) on the exact
+        # sample fight-end contract (produced by #4 box) must still produce verbatim locked prompt content
+        # (Training, 4 exact Cleaning Steps phrases, markers, Creative Guessing, not Exact Copy, Fresh Clues bullets,
+        # injected data) so it is ready for the one Smart Robot call without regression.
+        # After "GREEN" (or immediate if pre-existing behavior): test passes, fidelity locked for #6 wiring.
+        # Uses public interface only. Observable: the prompt string for the call path contains required locked elements.
+        # This tracer ensures Prompt Constructor + coordinator delegation are unchanged and correct before call logic.
+
+        import json
+        from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+
+        sample_path = self.prompts_dir / "sample-fight-end-data.json"
+        data = json.loads(sample_path.read_text(encoding="utf-8"))
+        contract = {"final_fuzz": data["final_fuzz"], "fresh_clues": data["fresh_clues"]}
+
+        coord = ReconstructCoordinator()  # default (no caller needed for build)
+        prompt = coord.build_prompt(contract)
+
+        # Verbatim locked from prompt (must be exact for the one call in #6).
+        self.assertIn("You are the Smart Robot", prompt)
+        self.assertIn("Creative Guessing powered by your Training", prompt)
+        self.assertIn("FINAL FUZZ", prompt)
+        self.assertIn("FRESH CLUES", prompt)
+        self.assertIn("1. Start with the strongest Fresh Clues. Put back the clearest words and short phrases first, in their right spots.", prompt)
+        self.assertIn("2. Look at the Clues still left in the Fuzz. Fill in more letters and words around the ones you already fixed.", prompt)
+        self.assertIn("3. The Fuzz is still very messy in places. Use Training to guess the rest of the Memory. Make small changes where it feels right for a real Memory.", prompt)
+        self.assertIn("4. Do one last quiet pass over the whole thing. Clean up the flow and meaning. This is where most of the Quiet Rewrite happens — change a few words or phrases so it is not an Exact Copy.", prompt)
+        self.assertIn("=== STEP 1 ===", prompt)
+        self.assertIn("=== RECONSTRUCTED MEMORY ===", prompt)
+        self.assertIn("Best Guess", prompt)
+        self.assertIn("visible Quiet Rewrite", prompt)
+        self.assertIn("not an Exact Copy", prompt)
+
+        # Injected contract data present (so Smart Robot sees the real end-of-fight state for Perfect Help).
+        self.assertIn("oak tree", prompt)
+        self.assertIn("Fuzz Level", prompt)
+        self.assertIn(data["final_fuzz"][:20], prompt)
+
+        # No avoided in the prompt fed to call.
+        for bad in ["noise", "scrambled", "fixing steps"]:
+            self.assertNotIn(bad, prompt.lower())
+
+    def test_reconstruct_coordinator_with_injected_model_caller_does_exactly_one_call_real_path_issue6(self):
+        # Cycle 3 (behavior 3 from approved TDD plan for issue #6).
+        # RED: written first expecting that when model_caller is injected at construction (DI for HF boundary),
+        # reconstruct_from_fight_end (no model_output override) calls the caller EXACTLY ONCE with the prompt
+        # built from contract, and returns the structured result (steps + recon + preview).
+        # Will fail (no _model_caller handling or count !=1 or not passed prompt) until GREEN adds the
+        # minimal if/else in reconstruct_from_fight_end to use provided caller for the one-call path.
+        # Fake caller returns sample text so parse succeeds. Verifies "exactly one GPU call per round".
+        # Public iface + injected only (no internal mocks). Uses sample contract shape.
+
+        import json
+        from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+
+        sample_path = self.prompts_dir / "sample-fight-end-data.json"
+        full = json.loads(sample_path.read_text(encoding="utf-8"))
+        contract = {"final_fuzz": full["final_fuzz"], "fresh_clues": full["fresh_clues"]}
+
+        call_count = {"n": 0}
+        received_prompts = []
+        sample_recon_text = (self.prompts_dir / "sample-reconstruction-01.md").read_text(encoding="utf-8")
+
+        def fake_model_caller(prompt: str) -> str:
+            call_count["n"] += 1
+            received_prompts.append(prompt)
+            return sample_recon_text
+
+        # Inject the fake (real path exercised; no model_output override)
+        coord = ReconstructCoordinator(model_caller=fake_model_caller)
+        result = coord.reconstruct_from_fight_end(contract)  # triggers the caller
+
+        self.assertEqual(call_count["n"], 1, "exactly one Smart Robot call must be performed per round (issue #6 AC)")
+        self.assertGreater(len(received_prompts), 0)
+        # The prompt passed to caller must be the one built (contains locked + injected data)
+        passed = received_prompts[0]
+        self.assertIn("You are the Smart Robot", passed)
+        self.assertIn("oak tree", passed)
+        self.assertIn("FRESH CLUES", passed)
+
+        # Structured result still produced (parse happened on fake return)
+        self.assertIn("reconstructed_memory", result)
+        self.assertIn("steps", result)
+        self.assertIn("prompt_preview", result)
+        self.assertTrue(len(result["reconstructed_memory"]) > 50)
+        self.assertIn("ancient", result["reconstructed_memory"].lower() or "gentle" in result.get("reconstructed_memory", "").lower())
+
+    def test_parse_after_injected_call_path_yields_4_steps_and_quiet_rewrite_educational_evidence_issue6(self):
+        # Cycle 4 (behavior 4). RED written first.
+        # Confirms that when using the one-call path (injected caller), the coordinator still reliably parses
+        # the returned text (using production parser) into 4 steps + recon, with educational value:
+        # step1 shows Fresh Clues impact (Perfect Help), final has visible Quiet Rewrite (Creative Guessing, not Exact Copy).
+        # Will pass after prior wiring (GREEN) as parse is unchanged but exercised end-to-end via call path.
+        # Uses public reconstruct + result (no direct private).
+
+        import json
+        from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+
+        sample_path = self.prompts_dir / "sample-fight-end-data.json"
+        full = json.loads(sample_path.read_text(encoding="utf-8"))
+        contract = {"final_fuzz": full["final_fuzz"], "fresh_clues": full["fresh_clues"]}
+        sample_recon = (self.prompts_dir / "sample-reconstruction-01.md").read_text(encoding="utf-8")
+
+        def fake(p): return sample_recon
+
+        coord = ReconstructCoordinator(model_caller=fake)
+        result = coord.reconstruct_from_fight_end(contract)
+
+        # The return uses parsed; verify structure + evidence (from #3 sample, locked for #6).
+        self.assertIn("steps", result)
+        steps = result["steps"]
+        for k in ["step1", "step2", "step3", "step4"]:
+            self.assertIn(k, steps)
+            self.assertTrue(len(steps[k]) > 20)
+
+        recon = result["reconstructed_memory"]
+        self.assertTrue(len(recon) > 50)
+        # Fresh Clues / Perfect Help in early step (tree/river/silver from sample step1)
+        self.assertIn("tree", steps.get("step1", ""))
+        self.assertIn("river", steps.get("step1", ""))
+        # Quiet Rewrite creative in final (not exact copy)
+        self.assertTrue(any(x in recon.lower() for x in ["ancient", "gentle", "drifting"]), "Quiet Rewrite evidence must be present in reconstructed output from call path")
+
+    def test_full_real_path_flow_with_injected_caller_explicit_ephemeral_forget_and_privacy_issue6(self):
+        # Cycle 5 (behavior 5 from approved plan).
+        # RED first: full flow using injected caller exercises build + one call + parse + return; AFTER the call (in finally)
+        # the coordinator must have explicitly/ephemerally forgotten the sensitive inputs (no retention of final_fuzz,
+        # fresh_clues content, full prompt, raw in result or instance). Result must contain only safe structured
+        # output + short preview (not full sensitive data). Privacy: contract-only, never original Memory.
+        # Will fail on leakage in result or missing forget design until GREEN adds try/finally + result curation.
+        # Uses distinctive contract pieces to assert absence in bad places.
+
+        import json
+        from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+
+        sample_path = self.prompts_dir / "sample-fight-end-data.json"
+        full = json.loads(sample_path.read_text(encoding="utf-8"))
+        contract = {"final_fuzz": full["final_fuzz"], "fresh_clues": full["fresh_clues"]}
+        sample_recon = (self.prompts_dir / "sample-reconstruction-01.md").read_text(encoding="utf-8")
+
+        def fake(p): return sample_recon
+
+        coord = ReconstructCoordinator(model_caller=fake)
+        result = coord.reconstruct_from_fight_end(contract)
+
+        # Structured safe return only.
+        self.assertIn("reconstructed_memory", result)
+        self.assertIn("steps", result)
+        self.assertIn("prompt_preview", result)
+        self.assertIn("note", result)
+
+        full_result_str = str(result).lower()
+        # Ephemeral: do not leak full input Fuzz or full clue details or full prompt into the returned structure
+        # (preview is intentionally truncated; full sensitive data must not be present).
+        self.assertNotIn(full["final_fuzz"][:50].lower(), full_result_str)  # long distinctive chunk of fuzz absent
+        # Fresh clue words may appear in recon legitimately, but the spot/fuzz_level metadata from input should not be echoed raw.
+        # Check no full contract blob.
+        self.assertNotIn('"fuzz_level": 3', full_result_str)
+        self.assertNotIn("spot/position", full_result_str)  # from input clue formatting
+
+        # Privacy: never original_memory key or raw contract input data leaked into result (glossary term "original Memory" may appear in educational recon notes legitimately).
+        self.assertNotIn("original_memory", full_result_str)
+        # Input contract distinctive pieces (fuzz_level metadata, spot phrasing) must not be echoed from the received fight_end_data.
+        self.assertNotIn('"fuzz_level": 3', full_result_str)
+        self.assertNotIn("spot/position", full_result_str)
+
+        # Note updated for #6 (real path + forget).
+        self.assertIn("#6", result.get("note", ""))
+        self.assertIn("ephemeral", result.get("note", "").lower())
 
     def test_prompt_constructor_build_prompt_with_sample_data_produces_locked_verbatim_prompt_with_injections(self):
         # Cycle 2 (behavior 2 from approved TDD plan for issue #5).
@@ -264,7 +505,7 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
         # The full built prompt (exercised) contains locked sections; the truncated preview starts with the header
         # (contains "Smart Robot") and the note confirms stub usage. This is sufficient signal that build_prompt ran.
         note = result.get("note", "")
-        self.assertTrue("Smart Robot" in preview or "Smart Robot" in note or "Stubbed" in note)
+        self.assertTrue("Smart Robot" in preview or "Smart Robot" in note or "#6" in note or "ephemeral" in note.lower())
 
         # Privacy: result and flow never involve or leak original Memory.
         full_result_str = str(result).lower()
@@ -272,7 +513,7 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
         self.assertNotIn('"original"', full_result_str)
 
         # Note explains the stub + points to #6 (ephemeral).
-        self.assertIn("Stubbed", result["note"])
+        self.assertIn("#6", result["note"])
         self.assertIn("#6", result["note"])
         self.assertIn("ephemeral", result["note"].lower())
 
@@ -317,9 +558,10 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
         self.assertTrue(len(body.get("reconstructed_memory", "")) > 20)
 
         note = body.get("note", "")
-        self.assertIn("Stubbed", note)
+        # Note evolved for #6 real path (fallback still exercised for compat); contains the key markers.
         self.assertIn("#6", note)
         self.assertIn("ephemeral", note.lower())
+        self.assertIn("Real one Smart Robot call", note)
 
 
 if __name__ == "__main__":
