@@ -38,6 +38,121 @@ describe("fuzz live fight box shell (Bun + TypeScript)", () => {
   });
 });
 
+// TDD vertical for issue #7 (Progressive 4 Cleaning Steps waiting UX in the live fight box during Reconstructing).
+// Per approved plan, issue #7 body, #6 result shape, parent PRD #1, /tmp/handoff-fuzz-issues.md, ADR-0001, CONTEXT.md (glossary gospel).
+// This slice adds the waiting experience: after stop + #6 one-call result, auto-activate view and progressively display the 4 steps
+// with client-side pauses (simulating arrival from single roundtrip). Full flow demoable. Auto-activate on result per user confirmation.
+// Deep module opportunity for sequencing logic (testable public interface, timing abstracted) identified for later tracers (B3+).
+// All terms: exact glossary only. References: https://github.com/sivaratrisrinivas/fuzz/issues/7 (and #6, #1), handoff, CONTEXT.md, ADR-0001.
+// TDD: RED first (new test for observable), minimal GREEN, one behavior per cycle. Worktree isolated.
+
+describe("progressive 4 Cleaning Steps waiting UX during Reconstructing (issue #7, consumes #6 result)", () => {
+  test("Reconstructing waiting view contains clear friendly message about Smart Robot starting 4 Cleaning Steps and is prepared for progressive display (B1 RED->GREEN tracer)", async () => {
+    // RED written first for B1: this will fail until GREEN updates the view-reconstructing section (and nearby script/comments)
+    // with the exact friendly "Smart Robot has started Reconstructing using its 4 Cleaning Steps" messaging per issue #7 AC,
+    // plus #7 traceability, progressive-ready structure (e.g. ids or containers for steps), and glossary discipline.
+    // Observable through public: html content served by box (test reads the source file like prior tracers).
+    // Uses only public shell artifact. After GREEN passes: view ready for B2+ result wiring + progressive.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Friendly message + #7 AC language (exact intent, will be in the view; split asserts to survive glossary spans in source).
+    expect(html).toContain("has started Reconstructing using its 4 Cleaning Steps");
+    expect(html).toContain("Cleaning Steps on the"); // safe literal across the Fuzz span in "Steps on the Fuzz using..." for the friendly message sentence
+
+    // Traceability for this vertical + consumption of #6 structured result (steps available for progressive).
+    expect(html).toContain("issue #7");
+    expect(html).toContain("issue #6");
+    expect(html).toContain("steps"); // the result.steps from coordinator will drive display
+
+    // Progressive display affordance markers (ids/containers for B3/B4 dynamic population; initially static friendly content).
+    expect(html).toContain("progressive-steps");
+    expect(html).toContain("step-1");
+    expect(html).toContain("step-4");
+
+    // Still only glossary (CONTEXT.md); no drift.
+    expect(html).toContain("Reconstructing");
+    expect(html).toContain("4 Cleaning Steps");
+    expect(html).toContain("Smart Robot");
+    expect(html).toContain("Fresh Clues");
+    expect(html).toContain("Sand Drawing");
+
+    // Avoided terms banned.
+    expect(html).not.toContain("noise");
+    expect(html).not.toContain("scrambled");
+  });
+
+  test("On stopFight receiving #6 result, flow auto-activates Reconstructing view and populates from actual steps data (B2 RED->GREEN tracer)", async () => {
+    // RED first for B2 (per approved plan + auto-activate choice): test will fail on missing activation/populate code in the script until GREEN edits the fetch .then in stopFight.
+    // Observable: source contains the auto showView('reconstructing') or equivalent + population of step contents using data.steps.stepN (the shape returned by coordinator post #6).
+    // This exercises the public integration of #6 result into the waiting UX. After pass, view auto shows on real stop + receive (demo needs helper running).
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Auto-activate behavior (on successful result receive from the existing /reconstruct in stopFight).
+    expect(html).toContain("showView('reconstructing')");
+    expect(html).toContain("lastReconstructResult");
+
+    // Population from real #6 result shape (steps + stepN) into the progressive containers.
+    expect(html).toContain("data.steps");
+    expect(html).toContain("steps['step");
+    expect(html).toContain(".step-content");
+    expect(html).toContain("step-1");
+
+    // Glossary + references maintained in the added logic comments/code.
+    expect(html).toContain("Reconstructing");
+    expect(html).toContain("4 Cleaning Steps");
+    expect(html).toContain("issue #7");
+  });
+
+  test("4 Cleaning Steps are revealed progressively with short client-side pauses after activation (B3 RED->GREEN tracer)", async () => {
+    // RED for B3: will fail until GREEN adds sequencing with setTimeout (or equiv) to surface step texts one-by-one with pauses, per issue #7 AC "progressively one after another with short pauses (simulating arrival from the single call)".
+    // No streaming; all data already received in #6 result. Observable in source: timing/sequencing logic + step reveal progression.
+    // Keeps the educational Sand Drawing slow clean-up feel. Test uses public html/script source.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Progressive timing (client pauses, one step at a time).
+    expect(html).toContain("setTimeout");
+    expect(html).toContain("progressive");
+    expect(html).toContain("step-by-step");
+    expect(html).toContain("pause"); // from "pauses", "short pause"
+
+    // Still drives from the received steps (not hardcoded).
+    expect(html).toContain("steps['step");
+    expect(html).toContain("issue #7");
+  });
+
+  test("Progressive display gives Sand Drawing clean-up experience (step UI updates, status, full flow ready) and preserves glossary/privacy (B4/B5/B6/B7 tracer)", async () => {
+    // Combined remaining behaviors RED->GREEN: the sequencing updates DOM for educational progressive feel; full flow from fight stop to steps; all glossary; works on sample (no real GPU); no original Memory leakage in box layer.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // UI updates for progressive feel (opacity, content fill, status changes, border for complete).
+    expect(html).toContain("opacity-60");
+    expect(html).toContain("remove('opacity-60')");
+    expect(html).toContain("borderColor");
+    expect(html).toContain("reconstruct-status");
+
+    // Full flow references (Memory entry -> fight -> stop -> #6 result -> auto reconstruct progressive).
+    expect(html).toContain("Endless Fight");
+    expect(html).toContain("stopFight");
+    expect(html).toContain("/reconstruct");
+
+    // Glossary everywhere + #7.
+    const required = ["Reconstructing", "4 Cleaning Steps", "Smart Robot", "Fresh Clues", "Sand Drawing", "Feeling Lesson", "Perfect Help"];
+    for (const t of required) expect(html).toContain(t);
+    expect(html).toContain("issue #7");
+
+    // Privacy (original Memory local only) still asserted in source.
+    expect(html).toContain("original Memory");
+    expect(html).toContain("local only");
+
+    // No avoided terms.
+    expect(html).not.toContain("noise");
+  });
+});
+
 // TDD for issue #4 (vertical slice per handoff, issue #4 body, PRD #1, ADR-0001, CONTEXT.md).
 // Deep Fuzz Simulator module (client-side, Bun/TS) owns Dissolving (The Waves at rising Fuzz Levels),
 // Rewriting, and automatic capture of Fresh Clues at the exact right Fuzz Level for Perfect Help.
