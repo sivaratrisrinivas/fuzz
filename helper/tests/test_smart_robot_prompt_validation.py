@@ -165,8 +165,10 @@ class TestSmartRobotPromptValidationArtifacts(unittest.TestCase):
         for bad in ["noise", "scrambled", "the magic trick", "fixing steps"]:
             self.assertNotIn(bad, low)
 
-        # Parser exercise (public, minimal, only for verifying the chosen output format is reliable).
-        parsed = parse_reconstruction_output(output_text)
+        # Parser exercise now uses the production parser from the deep Reconstruct Coordinator (#5).
+        # The local def below has been removed (real logic lives in the coordinator per the original comment).
+        from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+        parsed = ReconstructCoordinator().parse_reconstruction(output_text)
         self.assertIn("step1", parsed)
         self.assertIn("step2", parsed)
         self.assertIn("step3", parsed)
@@ -174,33 +176,6 @@ class TestSmartRobotPromptValidationArtifacts(unittest.TestCase):
         self.assertIn("reconstructed_memory", parsed)
         self.assertTrue(len(parsed["reconstructed_memory"]) > 50)
         self.assertIn("ancient", parsed["reconstructed_memory"].lower() or "gentle" in parsed["reconstructed_memory"].lower())  # evidence of Quiet Rewrite creative change in this sample
-
-
-def parse_reconstruction_output(text: str) -> dict:
-    """Minimal public parser for the locked marked format.
-    Exercises only the observable output contract chosen for the Smart Robot.
-    Real production parsing + coordinator logic belongs in the deep Reconstruct Coordinator (#5).
-    This exists so the sample artifacts can be verified as parsable during this TDD slice.
-    """
-    import re
-    result = {}
-    # Split on the markers. Expect text after each.
-    markers = [
-        ("step1", "=== STEP 1 ==="),
-        ("step2", "=== STEP 2 ==="),
-        ("step3", "=== STEP 3 ==="),
-        ("step4", "=== STEP 4 ==="),
-        ("reconstructed_memory", "=== RECONSTRUCTED MEMORY ==="),
-    ]
-    for key, marker in markers:
-        # Capture content until next marker or end.
-        pattern = re.escape(marker) + r"\s*(.*?)(?=\n===|\Z)"
-        match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
-        if match:
-            result[key] = match.group(1).strip()
-        else:
-            result[key] = ""
-    return result
 
 
 if __name__ == "__main__":
