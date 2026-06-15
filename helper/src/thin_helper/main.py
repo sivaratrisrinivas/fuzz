@@ -13,6 +13,8 @@ All terms here are from the locked glossary in CONTEXT.md.
 
 from fastapi import FastAPI
 
+from .reconstruct_coordinator import ReconstructCoordinator
+
 app = FastAPI(
     title="Fuzz Thin Helper",
     description=(
@@ -22,8 +24,12 @@ app = FastAPI(
         "Ephemeral only - forgets all data (Fuzz, Fresh Clues) immediately after the call. "
         "See PRD #1, ADR-0001, CONTEXT.md, issues #2/#5/#6."
     ),
-    version="0.1.0-shell",
+    version="0.2.0-issue5-deep-coordinator",
 )
+
+# The Reconstruct Coordinator (deep module, only entrypoint per issue #5) is instantiated here.
+# It owns Prompt Constructor + parsing + (for this slice) the stubbed reconstruct path using validated #3 sample.
+_coordinator = ReconstructCoordinator()
 
 
 @app.get("/")
@@ -44,3 +50,18 @@ def read_root():
 @app.get("/health")
 def health():
     return {"status": "ok", "component": "thin helper (Python) shell per issue #2"}
+
+
+@app.post("/reconstruct")
+def reconstruct_endpoint(payload: dict):
+    """Basic endpoint (issue #5 ACs).
+
+    Receives the data contract {final_fuzz, fresh_clues: [...] } produced by the live fight box at end of Endless Fight.
+    Delegates to the Reconstruct Coordinator (the only entrypoint), which builds the locked prompt and (for this slice)
+    returns structured 4 Cleaning Steps + Reconstructed Memory using the stubbed #3 sample path.
+    Real Smart Robot one-call + immediate forget of all data is implemented in #6.
+
+    Thin coordinator only. Privacy: only contract fields are accepted; original Memory never enters the helper.
+    """
+    result = _coordinator.reconstruct_from_fight_end(payload)
+    return result
