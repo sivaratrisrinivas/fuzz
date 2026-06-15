@@ -4,8 +4,6 @@
 # Bun / TypeScript (live fight box)
 box/node_modules/
 box/.bun/
-box/bun.lock
-box/bun.lockb
 box/dist/
 box/.cache/
 *.tsbuildinfo
