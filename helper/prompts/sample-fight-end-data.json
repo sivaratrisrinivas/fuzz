@@ -1,0 +1,30 @@
+{
+  "description": "Representative sample fight-end data for Smart Robot prompt validation (issue #3). Uses the oak tree Memory from the live fight box placeholder UI (box/src/index.html) as reference for constructing realistic final Fuzz + Fresh Clues. This is the exact shape of data the box will send at end of Endless Fight: only final Fuzz + Fresh Clues records (spot/position, words, Fuzz Level). Used exclusively for dev prompt engineering and sample capture on Qwen/Qwen3.6-35B-A3B via ZeroGPU/Pro. Never sent to or captured from production nvidia-l4. References: PRD #1 (data contract), issue #3, CONTEXT.md, ADR-0001.",
+  "original_memory_for_reference_only": "The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell.",
+  "final_fuzz": "The o** o*k t**e by t*e r**er had s***d for c**t*****s. Its r**ts dr**k from the s**w str**m that w**nd thr**gh the v**l*y like a s**ver th**ad. B**ds n**ted in its h**h br**nch*s and ch**dren pl**ed under its sh**e in s**mmer. Ev**y a**t**mn its l**ves t**ned the c**or of f**re bef**re they f**l.",
+  "fresh_clues": [
+    {
+      "spot": "approx chars 4-11 (words 'oak tree' in the Memory)",
+      "words": "oak tree",
+      "fuzz_level": 3
+    },
+    {
+      "spot": "approx chars 20-24 (word 'river')",
+      "words": "river",
+      "fuzz_level": 5
+    },
+    {
+      "spot": "approx chars 110-123 ('silver thread' phrase)",
+      "words": "silver thread",
+      "fuzz_level": 7
+    }
+  ],
+  "references": [
+    "PRD https://github.com/sivaratrisrinivas/fuzz/issues/1",
+    "issue #3",
+    "https://github.com/sivaratrisrinivas/fuzz/issues/3",
+    "CONTEXT.md",
+    "ADR-0001",
+    "/tmp/handoff-fuzz-issues.md"
+  ]
+}
