@@ -31,7 +31,7 @@ It is built to be:
 
 5. "Play again" wipes the round from your browser. The server forgets the data immediately after the AI call finishes.
 
-Current state: The project structure and placeholder screens are in place so you can run the shells and see the intended flow. The real-time damage simulation, precise recording of your fixes, and connection to the live AI model are being built next.
+Current state: The shells for the browser game and backend coordinator are in place so you can run them and see the intended flow. The instructions for the remote AI model (how to reconstruct the text in four clear stages) have been finalized and tested with example data on development tools. The real-time damage simulation, precise recording of your fixes, and connection to the live AI model are being built next.
 
 ## Run locally (current development shells)
 
