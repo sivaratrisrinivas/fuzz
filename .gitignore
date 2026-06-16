@@ -9,6 +9,9 @@ box/.cache/
 *.tsbuildinfo
 
 # Python (thin helper)
+# Catch __pycache__ anywhere under the project (src/ layout, tests/, future packages, etc.)
+__pycache__/
+**/__pycache__/
 helper/__pycache__/
 helper/*.py[cod]
 helper/*$py.class
