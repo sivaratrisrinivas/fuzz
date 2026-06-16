@@ -113,12 +113,12 @@
         </div>
       </div>
 
-      <!-- #10 resilience (tracer 1 UI per approved plan): friendly recoverable options for Smart Robot slow/fail (during Reconstructing/waiting or reveal). Integrated here for visibility in waiting phase. Uses exact glossary (CONTEXT.md). "wait longer" / "try again reusing the exact same fight-end data contract" / "start a new Memory" per PRD story 17 + issue #10 ACs. Stash of lastFightEndData + timeout/Abort + dynamic show + tryAgainReconstruct wiring added in tracer 2+. Privacy note: original Memory client-only, thin helper ephemeral (never stores). Full E2E journey ties #6/#7/#8/#9. -->
-      <div id="resilience-panel" class="mt-4 p-4 border border-amber-800 bg-amber-950/40 rounded text-sm">
+      <!-- #10 resilience (tracer 1 UI per approved plan): friendly recoverable options for Smart Robot slow/fail (during Reconstructing/waiting or reveal). Integrated here for visibility in waiting phase. Uses exact glossary (CONTEXT.md). "Wait longer" / "Try again (reusing the exact same fight-end data contract)" / "Start a new Memory" per PRD story 17 + issue #10 ACs. Stash of lastFightEndData + timeout/Abort + dynamic show + tryAgainReconstruct wiring added in tracer 2+. Privacy note: original Memory client-only, thin helper ephemeral (never stores). Full E2E journey ties #6/#7/#8/#9. -->
+      <div id="resilience-panel" style="display:none" class="mt-4 p-4 border border-amber-800 bg-amber-950/40 rounded text-sm">
         <p class="text-amber-300 mb-2">The <span class="glossary-term">Smart Robot</span> call for <span class="glossary-term">Reconstructing</span> is slow or failed. Your <span class="glossary-term">original Memory</span> is private on your side only. The thin helper forgets everything after the one <span class="glossary-term">Smart Robot</span> call (ephemeral). You can:</p>
         <div class="flex gap-2 flex-wrap">
-          <button class="px-4 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-sm">Wait longer</button>
-          <button class="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 rounded text-sm">Try again (reusing the exact same fight-end data contract)</button>
+          <button onclick="waitLonger()" class="px-4 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-sm">Wait longer</button>
+          <button onclick="tryAgainReconstruct()" class="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 rounded text-sm">Try again (reusing the exact same fight-end data contract)</button>
           <button onclick="resetAll()" class="px-4 py-1.5 bg-white text-black font-medium rounded text-sm">Start a new Memory</button>
         </div>
         <div class="text-[10px] text-amber-400/80 mt-1">Re-uses the exact contract from stop (final <span class="glossary-term">Fuzz</span> + <span class="glossary-term">Fresh Clues</span>) for retry without re-fighting. "Start a new Memory" uses resetAll (issue #9) — instant full clear, client-only, nothing sent.</div>
@@ -309,6 +309,7 @@
     let waveTimer = null;
     let fightActive = false;
     let currentOriginalMemory = null; // client-local only for reveal comparator (round duration; cleared on reset/new). Never sent. Per #8 + privacy.
+    let lastFightEndData = null; // #10: client-only stash of the exact fight-end data contract ({final_fuzz, fresh_clues}) from endFight / stop. Enables "Try again (reusing the exact same fight-end data contract)" without re-running the Endless Fight. Cleared on resetAll (privacy + fresh start) and after successful reconstruct. Only used for explicit retry POST to thin helper.
 
     function showView(name) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -426,6 +427,7 @@
       stopWaves();
       if (!currentSim) return;
       const end = currentSim.endFight();
+      lastFightEndData = end; // #10: stash exact fight-end data contract (final_fuzz + fresh_clues only) for "Try again reusing the exact same..." on slow/fail. Client-only; cleared on reset or post-success.
       const panel = document.getElementById('end-data-panel');
       const pre = document.getElementById('end-json');
       if (pre) pre.textContent = JSON.stringify(end, null, 2);
@@ -437,18 +439,31 @@
 
       // #6: send the exact data contract (final_fuzz + fresh_clues only; original Memory stayed local) to thin helper.
       // Receives result of exactly one Smart Robot call (4 Cleaning Steps + Reconstructed Memory) with ephemeral forget on helper side.
-      // Handle: append summary to panel (full UX progressive reveal in #7+). Uses relative URL (proxied by dev-server).
+      // #10: wrapped with AbortController + 30s timeout for slow/fail detection. On timeout/error: show #resilience-panel (Wait longer / Try again reusing contract / Start new via resetAll). lastFightEndData enables retry POST of identical contract (no new Endless Fight needed). Privacy preserved (stash local; reset clears; nothing sent on Play again).
+      // Uses relative URL (proxied by dev-server). Also hide resilience panel on success path.
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => { controller.abort(); }, 30000); // 30s default per approved plan for "slow" Smart Robot during Reconstructing
       fetch('/reconstruct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(end),
-      }).then(function (r) { return r.json(); }).then(function (data) {
+        signal: controller.signal,
+      }).then(function (r) {
+        clearTimeout(timeoutId);
+        if (!r.ok) {
+          throw new Error('reconstruct failed with status ' + r.status);
+        }
+        return r.json();
+      }).then(function (data) {
         if (pre) {
           pre.textContent = pre.textContent + '\n\n--- Received from thin helper (one Smart Robot call + ephemeral) ---\n' +
             JSON.stringify({ reconstructed_memory_preview: (data.reconstructed_memory || '').slice(0, 120) + '...', steps: Object.keys(data.steps || {}) }, null, 2);
         }
         // Stash for any follow-on view use (reveal etc. use local original for diff in later slices).
         window.lastReconstructResult = data;
+        // #10: on success after possible prior error, hide resilience options
+        const resP = document.getElementById('resilience-panel');
+        if (resP) resP.style.display = 'none';
         console.log('%c[Fuzz #6] Reconstruct result received from helper (one call, ephemeral).', 'color:#0a0');
 
         // B2/B3 (issue #7): auto-activate the Reconstructing waiting view. Then progressively reveal the 4 Cleaning Steps one-by-one
@@ -496,9 +511,12 @@
           }
         } catch (e) { /* non-fatal for dev UX */ }
       }).catch(function (e) {
-        if (pre) pre.textContent = pre.textContent + '\n\n(Helper call failed - is thin helper uvicorn running on :8000? See README.)';
+        clearTimeout(timeoutId);
+        if (pre) pre.textContent = pre.textContent + '\n\n(Helper call failed or timed out - Smart Robot slow/fail path. See resilience options.)';
         console.warn('Fuzz #6 helper /reconstruct failed (dev only):', e);
-        // #10 resilience (future tracers): on real timeout or error here (or via Abort in stopFight), surface #resilience-panel (with Wait longer / Try again reusing exact same fight-end data contract / Start a new Memory via resetAll). lastFightEndData stashed before fetch for tryAgain without new fight. See approved plan + tracer 2.
+        // #10: surface resilience options (panel) for timeout or any error. lastFightEndData is already stashed so Try again can reuse the exact same contract.
+        const resP = document.getElementById('resilience-panel');
+        if (resP) resP.style.display = 'block';
       });
     }
 
@@ -506,6 +524,7 @@
       stopWaves();
       currentSim = null;
       currentOriginalMemory = null; // #8: clear local original (reveal comparator only; privacy + instant new round per AC + PRD).
+      lastFightEndData = null; // #10: clear stashed fight-end contract (client-only retry data); privacy + instant fresh start (nothing sent on Play again / reset)
       window.lastReconstructResult = null; // #9: clear Reconstructed Memory + result state (from #6 one-call) — no trace of prior 4 Cleaning Steps or Quiet Rewrite
       // #9: wipe 4 Cleaning Steps UI traces (content + complete visuals) + status for full instant clear of Reconstructing state (no leftover in UI)
       for (let n = 1; n <= 4; n++) {
@@ -531,6 +550,83 @@
       // #9 issue #9: Play again instant full clear — all round pieces (Memory, Fuzz, Fresh Clues, 4 Cleaning Steps, Reconstructed Memory, state) forgotten client-side only. Nothing sent to thin helper. Per ACs + PRD #1 + #8 base.
       // Also clear any live-fight flag (Play again always gives fresh non-"reset" path)
       sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
+    }
+
+    // #10 resilience fns (tracer 2+ wiring per approved plan). Client-only. tryAgain re-POSTs the exact stashed contract (lastFightEndData) for another one Smart Robot call. waitLonger is graceful "keep waiting" UX. resetAll (from #9) for start new. All glossary + privacy.
+    function waitLonger() {
+      const resP = document.getElementById('resilience-panel');
+      if (resP) {
+        const p = resP.querySelector('p');
+        if (p) p.innerHTML = 'Still waiting on the <span class="glossary-term">Smart Robot</span> for <span class="glossary-term">Reconstructing</span> using the same fight-end data contract (may succeed). Your <span class="glossary-term">original Memory</span> remains private on your side only.';
+      }
+      // In real slow case the original promise may still settle later; this just gives user control/feedback.
+    }
+
+    function tryAgainReconstruct() {
+      const resP = document.getElementById('resilience-panel');
+      if (resP) resP.style.display = 'none';
+      if (!lastFightEndData) {
+        // nothing to retry; fall back to clean start
+        resetAll();
+        return;
+      }
+      const end = lastFightEndData; // exact same contract reuse (final_fuzz + fresh_clues only)
+      const panel = document.getElementById('end-data-panel');
+      const pre = document.getElementById('end-json');
+      if (pre) pre.textContent = JSON.stringify(end, null, 2) + '\n\n--- Retrying (reusing exact same fight-end data contract) ---';
+      if (panel) panel.classList.remove('hidden');
+
+      // Re-issue the one Smart Robot call with identical data (no re-fight, no new clues). Same progressive on success.
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      fetch('/reconstruct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(end),
+        signal: controller.signal,
+      }).then(function (r) {
+        clearTimeout(timeoutId);
+        if (!r.ok) throw new Error('retry status ' + r.status);
+        return r.json();
+      }).then(function (data) {
+        window.lastReconstructResult = data;
+        if (pre) {
+          pre.textContent = pre.textContent + '\n\n--- Received on retry from thin helper (one Smart Robot call + ephemeral) ---\n' +
+            JSON.stringify({ reconstructed_memory_preview: (data.reconstructed_memory || '').slice(0, 120) + '...', steps: Object.keys(data.steps || {}) }, null, 2);
+        }
+        const resP2 = document.getElementById('resilience-panel');
+        if (resP2) resP2.style.display = 'none';
+        // re-trigger #7 progressive UX
+        try {
+          showView('reconstructing');
+          const steps = (data && data.steps) || {};
+          const status = document.getElementById('reconstruct-status');
+          for (let n=1; n<=4; n++) {
+            const el = document.getElementById('step-' + n);
+            if (el) { el.classList.add('opacity-60'); const c = el.querySelector('.step-content'); if (c) c.textContent = ''; }
+          }
+          if (status) status.textContent = 'The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the Fuzz using the Fresh Clues. Watch the steps appear progressively (client pauses). [retried]';
+          let delay = 250;
+          for (let n=1; n<=4; n++) {
+            setTimeout(() => {
+              const stepEl = document.getElementById('step-' + n);
+              if (stepEl) {
+                stepEl.classList.remove('opacity-60');
+                const content = stepEl.querySelector('.step-content');
+                if (content) content.textContent = steps['step' + n] || '(no step text)';
+                if (n > 1) { const prev = document.getElementById('step-' + (n-1)); if (prev) prev.style.borderColor = '#166534'; }
+              }
+              if (n===4 && status) status.textContent = 'The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the Fuzz using the Fresh Clues. All steps complete — Ready for the Reconstructed Memory and Quiet Rewrite. [after retry]';
+            }, delay);
+            delay += 850;
+          }
+        } catch(e){ /* non fatal */ }
+      }).catch(function (e) {
+        clearTimeout(timeoutId);
+        if (pre) pre.textContent = (pre.textContent || '') + '\n\n(Retry also failed. Use Wait longer or Start a new Memory.)';
+        const resP3 = document.getElementById('resilience-panel');
+        if (resP3) resP3.style.display = 'block';
+      });
     }
 
     function wireFightControls() {

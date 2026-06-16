@@ -601,4 +601,45 @@ describe("resilience paths, full E2E player journey verification, privacy/cost/g
     expect(html).not.toContain("noise");
     expect(html).not.toContain("scrambled");
   });
+
+  test("Client error/timeout path in stopFight + lastFightEndData stash for retry + tryAgainReconstruct (re-posts exact same contract) + show resilience options (TDD tracer 2, per approved plan)", async () => {
+    // RED for tracer 2: will fail until GREEN implements the error handling wiring, lastFightEndData (or equiv) stash before the /reconstruct POST, AbortController + timeout (30s default), tryAgainReconstruct fn, and logic to surface #resilience-panel (and wire its Try again button) on catch/timeout.
+    // Observable in public source: the stash assignment near end= , the fetch( with signal or Abort, tryAgainReconstruct def, lastFightEndData, timeout const/ literal, calls in catch or timeout arm, panel show/display.
+    // Covers AC "try again reusing the exact same fight-end data contract", timeout/fail during waiting, privacy (client stash only, reset clears).
+    // After pass: core recovery path in source. Tracer 3 adds waitLonger + recover-to-reveal + E2E audits.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Stash of fight-end contract (for try again without re-running fight/ waves)
+    expect(html).toContain("lastFightEndData");
+    expect(html).toContain("end = currentSim.endFight");
+    // or "const end = " near stopFight + assignment to last*
+
+    // Timeout + abort machinery for slow case (per 30s default in plan)
+    expect(html).toContain("AbortController");
+    expect(html).toContain("signal");
+    expect(html).toContain("timeout");
+    // 30000 or 30s or RECONSTRUCT_TIMEOUT
+
+    // try again function + re-use of stashed contract (no new sim/end needed)
+    expect(html).toContain("tryAgainReconstruct");
+    expect(html).toContain("lastFightEndData");
+    expect(html).toContain("/reconstruct");
+
+    // Error path enhancement (catch or timeout shows resilience UI; integrates with panel from tracer1)
+    expect(html).toContain("resilience-panel");
+    expect(html).toContain("catch");
+    expect(html).toContain("stopFight");
+
+    // Reset clears the retry stash too (privacy, fresh start per #9 + #10)
+    expect(html).toContain("resetAll");
+    expect(html).toContain("lastFightEndData = null");
+
+    // Glossary + #10 + prior refs for the recovery logic
+    expect(html).toContain("issue #10");
+    expect(html).toContain("fight-end data contract");
+    expect(html).toContain("Smart Robot");
+    expect(html).toContain("original Memory");
+    expect(html).toContain("private");
+  });
 });
