@@ -541,3 +541,64 @@ describe("play again instant full clear and round reset flows (client-side; refr
     expect(html).not.toContain("noise");
   });
 });
+
+// TDD vertical for issue #10 capstone (Resilience paths for Smart Robot slow/fail, full E2E player journey verification, privacy/cost/glossary audit, README/docs update).
+// Per user-approved plan from ask_user_question (after meticulous review of /tmp/handoff-fuzz-issue9-main-integration.md + #9-complete + #8 + issue #10 body+ACs + PRD #1 stories incl 17 + all priors, CONTEXT.md glossary, ADR-0001).
+// Builds directly on #6 (one Smart Robot call + result shape with steps/reconstructed_memory + ephemeral), #7 (progressive 4 Cleaning Steps in waiting), #8 (side-by-side + Quiet Rewrite + reveal), #9 (resetAll instant full clear + fresh start).
+// Tracer 1 (per approved priority): observable UI affordances for resilience (friendly messages + buttons using exact PRD language: "wait longer", "try again" reusing the exact same fight-end data contract, "start a new Memory"; #resilience surface/panel; glossary terms; traceability to #10 + full journey + privacy/client-only) present in source. RED first.
+// No new deep module (inline script enhancements only, consistent with #7/#9 wiring + #8 port). Tests are public source inspection only (Bun.file on index.html). One behavior slice at a time; tests run before any GREEN edits/commits.
+// All terms exact from CONTEXT.md only (Memory, Fuzz, Endless Fight, Fresh Clues, Perfect Help, Reconstructing, 4 Cleaning Steps, Smart Robot, Reconstructed Memory, Quiet Rewrite, Real Experience, Feeling Lesson, Sand Drawing, Creative Guessing, Best Guess, Training, Word Lesson, Fixing Science, Watch and Fight Way, Exact Copy). No avoided terms. Explicit audit phrases in later tracers.
+// References: https://github.com/sivaratrisrinivas/fuzz/issues/10 (parent #1), handoff-fuzz-issue9-main-integration.md + priors, CONTEXT.md, docs/adr/0001-..., #6/#7/#8/#9.
+// TDD hygiene: RED (this) will fail -> GREEN (minimal UI) -> pass -> hygiene (test, diff, secrets) -> commit -> next tracer.
+describe("resilience paths, full E2E player journey verification, privacy/cost/glossary audit (issue #10)", () => {
+  test("Resilience UI elements, messages and affordances (wait longer / try again reusing fight-end data contract / start a new Memory) + glossary + #10 refs present for Smart Robot timeout or failure during waiting or reveal (TDD tracer 1, priority 1 per approved plan)", async () => {
+    // RED written first: expects will fail until GREEN minimally adds the #resilience-panel (or integrated section), button texts, friendly glossary messages, and updates header/comments for #10.
+    // Observable ONLY through public shell source (html + script strings/ids). Covers AC "Friendly recoverable options ... shown and work on Smart Robot timeout or failure", PRD story 17, E2E journey affordances.
+    // After this GREEN: UI elements + strings prove the surface. Next tracers add actual timeout/catch wiring + stash + tryAgain + E2E full + audits.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Exact recoverable options per issue #10 ACs + PRD #1 story 17 (friendly messages/buttons for slow/fail)
+    expect(html).toContain("Wait longer");
+    expect(html).toContain("Try again");
+    expect(html).toContain("reusing the exact same fight-end data contract");
+    expect(html).toContain("Start a new Memory");
+
+    // Resilience surface (new panel or section id integrated in reconstructing/end-data area for waiting/reveal phases)
+    expect(html).toContain("resilience");
+
+    // Friendly context + glossary (Smart Robot slow/fail during Reconstructing; privacy reminder)
+    expect(html).toContain("Smart Robot");
+    expect(html).toContain("slow or");
+    expect(html).toContain("Reconstructing");
+    expect(html).toContain("original Memory");
+    expect(html).toContain("private");
+    expect(html).toContain("your side only");
+    expect(html).toContain("fight-end data contract");
+
+    // Full E2E journey references (ties #4 fight + #6 one-call /reconstruct + #7 progressive + #8 reveal + #9 reset)
+    expect(html).toContain("issue #10");
+    expect(html).toContain("issue #6");
+    expect(html).toContain("issue #7");
+    expect(html).toContain("issue #8");
+    expect(html).toContain("issue #9");
+    expect(html).toContain("/reconstruct");
+    expect(html).toContain("stopFight");
+    expect(html).toContain("resetAll");
+
+    // Glossary purity across the new strings + prior journey (CONTEXT.md is gospel)
+    const requiredGlossary = [
+      "Memory", "Endless Fight", "Fuzz", "Fresh Clues", "Perfect Help",
+      "4 Cleaning Steps", "Smart Robot", "Reconstructing", "Reconstructed Memory",
+      "Quiet Rewrite", "Creative Guessing", "Real Experience", "Feeling Lesson",
+      "Sand Drawing", "Best Guess", "Training"
+    ];
+    for (const term of requiredGlossary) {
+      expect(html).toContain(term);
+    }
+
+    // No drift to avoided terms (glossary discipline enforced in test and source)
+    expect(html).not.toContain("noise");
+    expect(html).not.toContain("scrambled");
+  });
+});

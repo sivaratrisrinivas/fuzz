@@ -28,7 +28,7 @@
       <p class="mt-3 max-w-prose text-zinc-400">
         Write a <span class="glossary-term">Memory</span>. Watch <span class="glossary-term">Dissolving</span> slowly turn it into <span class="glossary-term">Fuzz</span> through <span class="glossary-term">The Waves</span> at different <span class="glossary-term">Fuzz Levels</span>. Keep <span class="glossary-term">Rewriting</span> during the <span class="glossary-term">Endless Fight</span> to leave good <span class="glossary-term">Clues</span> and especially <span class="glossary-term">Fresh Clues</span> at the exact right time for <span class="glossary-term">Perfect Help</span>. At the end the <span class="glossary-term">Smart Robot</span> performs <span class="glossary-term">Reconstructing</span> using its <span class="glossary-term">Training</span> and exactly <span class="glossary-term">4 Cleaning Steps</span>, producing a <span class="glossary-term">Reconstructed Memory</span> that shows a visible <span class="glossary-term">Quiet Rewrite</span> (Creative Guessing, not an <span class="glossary-term">Exact Copy</span>). You feel the <span class="glossary-term">Real Experience</span> and learn the <span class="glossary-term">Feeling Lesson</span>. It all feels like the <span class="glossary-term">Sand Drawing</span>.
       </p>
-      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Issue #7: progressive 4 Cleaning Steps waiting UX during Reconstructing (auto on result, client pauses). Issue #8 complete: side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator + short Feeling Lesson message (local original + result.reconstructed_memory, browser port, dynamic). Issue #9 complete: Play again instant full clear and round reset flows (client-side; refresh during fight handling) — resetAll clears all pieces + empty Memory input; live-fight refresh shows gentle msg + forces fresh start (sessionStorage flag, no private data, glossary only). References: PRD #1, issues #4/#5/#6/#7/#8/#9, /tmp/handoff-fuzz-issue8-complete.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
+      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Issue #7: progressive 4 Cleaning Steps waiting UX during Reconstructing (auto on result, client pauses). Issue #8 complete: side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator + short Feeling Lesson message (local original + result.reconstructed_memory, browser port, dynamic). Issue #9 complete: Play again instant full clear and round reset flows (client-side; refresh during fight handling) — resetAll clears all pieces + empty Memory input; live-fight refresh shows gentle msg + forces fresh start (sessionStorage flag, no private data, glossary only). Issue #10 in progress (tracer vertical): resilience paths for Smart Robot slow/fail ("Wait longer" / "Try again reusing the exact same fight-end data contract" / "Start a new Memory"), full E2E player journey verification + privacy/cost/glossary audit (builds on #6-9; PRD #1 + handoff). References: PRD #1, issues #4-10, /tmp/handoff-fuzz-issue9-main-integration.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
     </header>
 
     <!-- View switcher (demo only — shows the four placeholder views) -->
@@ -113,10 +113,21 @@
         </div>
       </div>
 
+      <!-- #10 resilience (tracer 1 UI per approved plan): friendly recoverable options for Smart Robot slow/fail (during Reconstructing/waiting or reveal). Integrated here for visibility in waiting phase. Uses exact glossary (CONTEXT.md). "wait longer" / "try again reusing the exact same fight-end data contract" / "start a new Memory" per PRD story 17 + issue #10 ACs. Stash of lastFightEndData + timeout/Abort + dynamic show + tryAgainReconstruct wiring added in tracer 2+. Privacy note: original Memory client-only, thin helper ephemeral (never stores). Full E2E journey ties #6/#7/#8/#9. -->
+      <div id="resilience-panel" class="mt-4 p-4 border border-amber-800 bg-amber-950/40 rounded text-sm">
+        <p class="text-amber-300 mb-2">The <span class="glossary-term">Smart Robot</span> call for <span class="glossary-term">Reconstructing</span> is slow or failed. Your <span class="glossary-term">original Memory</span> is private on your side only. The thin helper forgets everything after the one <span class="glossary-term">Smart Robot</span> call (ephemeral). You can:</p>
+        <div class="flex gap-2 flex-wrap">
+          <button class="px-4 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-sm">Wait longer</button>
+          <button class="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 rounded text-sm">Try again (reusing the exact same fight-end data contract)</button>
+          <button onclick="resetAll()" class="px-4 py-1.5 bg-white text-black font-medium rounded text-sm">Start a new Memory</button>
+        </div>
+        <div class="text-[10px] text-amber-400/80 mt-1">Re-uses the exact contract from stop (final <span class="glossary-term">Fuzz</span> + <span class="glossary-term">Fresh Clues</span>) for retry without re-fighting. "Start a new Memory" uses resetAll (issue #9) — instant full clear, client-only, nothing sent.</div>
+      </div>
+
       <div class="mt-4">
         <button onclick="showView('reveal')" class="px-5 py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium">See the Reconstructed Memory and Quiet Rewrite →</button>
       </div>
-      <p class="mt-3 text-[10px] text-zinc-500">Stop fight triggers the single <span class="glossary-term">Smart Robot</span> call in the thin helper (issue #6: one call + immediate forget). The 4 Cleaning Steps appear progressively with short pauses (issue #7 client-side, no streaming assumption). Teaches the slow clean-up <span class="glossary-term">Sand Drawing</span> metaphor and the <span class="glossary-term">Feeling Lesson</span>. Uses exact result.steps + reconstructed_memory from coordinator.</p>
+      <p class="mt-3 text-[10px] text-zinc-500">Stop fight triggers the single <span class="glossary-term">Smart Robot</span> call in the thin helper (issue #6: one call + immediate forget). The 4 Cleaning Steps appear progressively with short pauses (issue #7 client-side, no streaming assumption). Teaches the slow clean-up <span class="glossary-term">Sand Drawing</span> metaphor and the <span class="glossary-term">Feeling Lesson</span>. Uses exact result.steps + reconstructed_memory from coordinator. Issue #10: resilience + full E2E verification + privacy/cost/glossary audit (builds on #6-9; see PRD #1 + handoff).</p>
     </div>
 
     <!-- 4. Reveal view (issue #8: populated side-by-side using local original Memory + reconstructed_memory from #6 result; Quiet Rewrite highlights via Reveal Comparator (browser port); short Feeling Lesson message) -->
@@ -487,6 +498,7 @@
       }).catch(function (e) {
         if (pre) pre.textContent = pre.textContent + '\n\n(Helper call failed - is thin helper uvicorn running on :8000? See README.)';
         console.warn('Fuzz #6 helper /reconstruct failed (dev only):', e);
+        // #10 resilience (future tracers): on real timeout or error here (or via Abort in stopFight), surface #resilience-panel (with Wait longer / Try again reusing exact same fight-end data contract / Start a new Memory via resetAll). lastFightEndData stashed before fetch for tryAgain without new fight. See approved plan + tracer 2.
       });
     }
 
