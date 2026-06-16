@@ -32,7 +32,7 @@ docs/adr/0001-... , CONTEXT.md , box/src/fuzz-simulator.ts (FightEndData contrac
 from pathlib import Path
 from typing import Optional, Any
 
-from thin_helper.prompt_constructor import PromptConstructor
+from .prompt_constructor import PromptConstructor
 
 
 class ReconstructCoordinator:
@@ -71,18 +71,45 @@ class ReconstructCoordinator:
             here = _P(__file__).resolve().parent
             sample_path = here.parent.parent / "prompts" / "sample-reconstruction-01.md"
             return sample_path.read_text(encoding="utf-8")
-        model = os.environ.get("FUZZ_SMART_ROBOT_MODEL", "Qwen/Qwen3.6-35B-A3B")
+        model = os.environ.get("FUZZ_SMART_ROBOT_MODEL", "Qwen/Qwen2.5-7B-Instruct")
         # If dedicated endpoint URL provided via env, InferenceClient accepts it as model= too.
         endpoint = os.environ.get("FUZZ_HF_ENDPOINT_URL")
         use_model = endpoint or model
         client = InferenceClient(model=use_model, token=token)
-        result = client.text_generation(
-            prompt,
-            max_new_tokens=1200,
+        result = client.chat_completion(
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1200,
             temperature=0.7,
-            do_sample=True,
         )
-        return result
+        return self._extract_chat_content(result)
+
+    @staticmethod
+    def _extract_chat_content(result: Any) -> str:
+        """Extract the Smart Robot text from the Hugging Face chat response shape."""
+        if isinstance(result, str):
+            return result
+
+        if isinstance(result, dict):
+            choices = result.get("choices") or []
+            if choices:
+                message = choices[0].get("message", {})
+                content = message.get("content")
+                if content is not None:
+                    return str(content)
+            return str(result)
+
+        choices = getattr(result, "choices", None) or []
+        if choices:
+            first_choice = choices[0]
+            message = getattr(first_choice, "message", None)
+            if isinstance(message, dict):
+                content = message.get("content")
+            else:
+                content = getattr(message, "content", None)
+            if content is not None:
+                return str(content)
+
+        return str(result)
 
     def build_prompt(self, fight_end_data: dict) -> str:
         """Delegate to Prompt Constructor using the data contract shape {final_fuzz, fresh_clues: [...] }.

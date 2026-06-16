@@ -45,7 +45,7 @@ def main():
     print("=== Fuzz Smart Robot Prompt Validation (dev tools / ZeroGPU / Pro only) ===")
     print(f"Using locked prompt: {prompt_path}")
     print(f"Using sample data: {data_path}")
-    print("Model target: Qwen/Qwen3.6-35B-A3B (per PRD and issue #3)")
+    print("Model target: Qwen/Qwen2.5-7B-Instruct (per handoff model selection)")
     print("Constraint: ZeroGPU/Pro for iteration. No nvidia-l4 production calls.\n")
 
     prompt_template = prompt_path.read_text(encoding="utf-8")
@@ -71,26 +71,26 @@ def main():
     if InferenceClient is None or not token:
         print("No huggingface_hub client or HF_TOKEN in env.")
         print("To perform a live dev run on the model: install huggingface_hub, set HF_TOKEN, and re-run.")
-        print("For production-grade dev iteration with the full 35B-A3B MoE on GPU: use a Gradio Space + @spaces.GPU")
+        print("For production-grade dev iteration with a GPU-backed model: use a Gradio Space + @spaces.GPU")
         print("  (see the huggingface-zerogpu skill and references/ in the agents skills dir).")
         print("\nThe representative sample output captured during prior dev validation lives at:")
         print("  helper/prompts/sample-reconstruction-01.md")
         print("It was produced following the exact locked prompt + data and demonstrates the required properties.")
         return
 
-    print("Attempting InferenceClient call to Qwen/Qwen3.6-35B-A3B (this may queue, require Pro/credits, or fail for large MoE on serverless).")
+    print("Attempting InferenceClient call to Qwen/Qwen2.5-7B-Instruct (text-only instruct, ~4s latency, good format adherence).")
     print("If it fails or is slow, fall back to a dedicated ZeroGPU Space as noted above.\n")
 
-    client = InferenceClient(model="Qwen/Qwen3.6-35B-A3B", token=token)
+    client = InferenceClient(model="Qwen/Qwen2.5-7B-Instruct", token=token)
     # Conservative generation params for structured multi-step instruction following.
-    result = client.text_generation(
-        full_prompt,
-        max_new_tokens=1200,
+    result = client.chat_completion(
+        messages=[{"role": "user", "content": full_prompt}],
+        max_tokens=1200,
         temperature=0.7,
-        do_sample=True,
     )
+    result_text = result.choices[0].message.content
     print("=== Raw model response (truncated for console) ===")
-    print(result[:2000] if len(result) > 2000 else result)
+    print(result_text[:2000] if len(result_text) > 2000 else result_text)
     print("\n(If good, copy relevant sections into a new sample-*.md following the format of sample-reconstruction-01.md)")
 
 

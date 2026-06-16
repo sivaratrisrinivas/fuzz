@@ -1,6 +1,6 @@
 # Sample Reconstruction Output 01 - Captured during dev validation for issue #3
 
-**Context**: Representative output from running the locked prompt (smart-robot-prompt.txt) + sample-fight-end-data.json on the Qwen/Qwen3.6-35B-A3B model.
+**Context**: Representative output from running the locked prompt (smart-robot-prompt.txt) + sample-fight-end-data.json. Originally captured on Qwen/Qwen3.6-35B-A3B (prior model, see ADR-0002). The recommended replacement is Qwen/Qwen2.5-7B-Instruct.
 **Validation environment**: Hugging Face dev tools only (ZeroGPU + Pro subscription / quotas for iteration and prompt engineering). Explicitly **never** the production dedicated nvidia-l4 endpoint.
 **References**: PRD https://github.com/sivaratrisrinivas/fuzz/issues/1, https://github.com/sivaratrisrinivas/fuzz/issues/3, /tmp/handoff-fuzz-issues.md, docs/adr/0001-..., CONTEXT.md (all glossary terms used exactly).
 

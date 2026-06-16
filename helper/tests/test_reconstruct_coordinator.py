@@ -482,8 +482,9 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
         self.assertNotIn("original", str(contract).lower())
         self.assertNotIn("original_memory", str(contract).lower())
 
+        sample_recon = (self.prompts_dir / "sample-reconstruction-01.md").read_text(encoding="utf-8")
         coord = ReconstructCoordinator()
-        result = coord.reconstruct_from_fight_end(contract, model_output=None)
+        result = coord.reconstruct_from_fight_end(contract, model_output=sample_recon)
 
         # Structured return for endpoint / callers.
         self.assertIn("reconstructed_memory", result)
@@ -549,8 +550,9 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
         }
 
         from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+        sample_recon = (self.prompts_dir / "sample-reconstruction-01.md").read_text(encoding="utf-8")
         coord = ReconstructCoordinator()
-        body = coord.reconstruct_from_fight_end(contract)
+        body = coord.reconstruct_from_fight_end(contract, model_output=sample_recon)
 
         self.assertIn("reconstructed_memory", body)
         self.assertIn("steps", body)
@@ -562,6 +564,91 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
         self.assertIn("#6", note)
         self.assertIn("ephemeral", note.lower())
         self.assertIn("Real one Smart Robot call", note)
+
+    def test_default_model_caller_uses_hugging_face_chat_completion_for_qwen_supported_task(self):
+        # Regression for the local uvicorn failure:
+        # Qwen/Qwen2.5-7B-Instruct is exposed via HF InferenceClient for chat, so the default
+        # Smart Robot path must call InferenceClient.chat_completion instead of text_generation.
+        import os
+        import sys
+        import types
+        from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+
+        sample_recon = (self.prompts_dir / "sample-reconstruction-01.md").read_text(encoding="utf-8")
+        calls = {"chat_completion": 0, "text_generation": 0, "messages": None, "max_tokens": None}
+
+        class FakeInferenceClient:
+            def __init__(self, model, token):
+                self.model = model
+                self.token = token
+
+            def chat_completion(self, *, messages, max_tokens, temperature):
+                calls["chat_completion"] += 1
+                calls["messages"] = messages
+                calls["max_tokens"] = max_tokens
+                return {"choices": [{"message": {"content": sample_recon}}]}
+
+            def text_generation(self, *args, **kwargs):
+                calls["text_generation"] += 1
+                raise AssertionError("default Smart Robot path must not use text_generation for the Qwen provider task")
+
+        fake_module = types.SimpleNamespace(InferenceClient=FakeInferenceClient)
+        previous_module = sys.modules.get("huggingface_hub")
+        previous_token = os.environ.get("HF_TOKEN")
+        previous_legacy_token = os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+        previous_model = os.environ.get("FUZZ_SMART_ROBOT_MODEL")
+        previous_endpoint = os.environ.get("FUZZ_HF_ENDPOINT_URL")
+        sys.modules["huggingface_hub"] = fake_module
+        os.environ["HF_TOKEN"] = "test-token"
+        os.environ["FUZZ_SMART_ROBOT_MODEL"] = "Qwen/Qwen2.5-7B-Instruct"
+        os.environ.pop("HUGGINGFACEHUB_API_TOKEN", None)
+        os.environ.pop("FUZZ_HF_ENDPOINT_URL", None)
+        try:
+            raw = ReconstructCoordinator()._default_model_caller("locked prompt")
+        finally:
+            if previous_module is None:
+                sys.modules.pop("huggingface_hub", None)
+            else:
+                sys.modules["huggingface_hub"] = previous_module
+            if previous_token is None:
+                os.environ.pop("HF_TOKEN", None)
+            else:
+                os.environ["HF_TOKEN"] = previous_token
+            if previous_legacy_token is None:
+                os.environ.pop("HUGGINGFACEHUB_API_TOKEN", None)
+            else:
+                os.environ["HUGGINGFACEHUB_API_TOKEN"] = previous_legacy_token
+            if previous_model is None:
+                os.environ.pop("FUZZ_SMART_ROBOT_MODEL", None)
+            else:
+                os.environ["FUZZ_SMART_ROBOT_MODEL"] = previous_model
+            if previous_endpoint is None:
+                os.environ.pop("FUZZ_HF_ENDPOINT_URL", None)
+            else:
+                os.environ["FUZZ_HF_ENDPOINT_URL"] = previous_endpoint
+
+        self.assertEqual(calls["chat_completion"], 1)
+        self.assertEqual(calls["text_generation"], 0)
+        self.assertEqual(calls["max_tokens"], 1200)
+        self.assertEqual(calls["messages"], [{"role": "user", "content": "locked prompt"}])
+        self.assertIn("=== RECONSTRUCTED MEMORY ===", raw)
+
+    def test_chat_content_extractor_handles_dict_and_object_hugging_face_shapes(self):
+        from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+
+        dict_result = {"choices": [{"message": {"content": "dict content"}}]}
+        self.assertEqual(ReconstructCoordinator._extract_chat_content(dict_result), "dict content")
+
+        class Message:
+            content = "object content"
+
+        class Choice:
+            message = Message()
+
+        class Result:
+            choices = [Choice()]
+
+        self.assertEqual(ReconstructCoordinator._extract_chat_content(Result()), "object content")
 
 
 if __name__ == "__main__":

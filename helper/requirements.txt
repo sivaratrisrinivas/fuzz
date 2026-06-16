@@ -11,7 +11,7 @@ pytest>=8.0
 httpx>=0.27
 
 # For Smart Robot one-call (issue #6): huggingface_hub provides InferenceClient.
-# Used by ReconstructCoordinator default model_caller (Qwen/Qwen3.6-35B-A3B).
+# Used by ReconstructCoordinator default model_caller (Qwen/Qwen2.5-7B-Instruct).
 # DEV: ZeroGPU / Pro / token for iteration (never dedicated nvidia-l4 in dev).
 # PROD path (follow-on): dedicated HF Inference Endpoint on nvidia-l4 (hourly, scale-to-zero).
 # See validate-smart-robot-on-dev.py, huggingface-zerogpu skill, and ADR-0001.
