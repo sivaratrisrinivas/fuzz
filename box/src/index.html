@@ -159,6 +159,8 @@
     // All labels, logs, and data use exact glossary from CONTEXT.md only.
 
     const OAK_FOR_DEMO = "The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell.";
+    // Sample recon (from sample-reconstruction-01.md final) for direct view-switcher demo of #8 reveal (shows Quiet Rewrite highlights via comparator even without running full fight+stop).
+    const OAK_RECONSTRUCTED_SAMPLE = "The ancient oak tree by the gentle river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.";
 
     // --- Browser port of FuzzSimulator (mirrors TS implementation exactly for observable behavior) ---
     function createBrowserFuzzSimulator(originalMemory) {
@@ -247,9 +249,53 @@
     }
     // --- end port ---
 
+    // --- Browser port of RevealComparator (mirrors TS for demo; no build, single file playable).
+    // Uses the exact same approved public iface + deep heuristic for Quiet Rewrite creative changes.
+    // All terms from CONTEXT.md. Used by populateReveal for side-by-side after #7 progressive steps.
+    function createBrowserRevealComparator() {
+      function compare(originalMemory, reconstructedMemory) {
+        const origWords = new Set( (originalMemory || "").match(/\b[\w']+\b/g) || [] .map(function(w){return w.toLowerCase();}) );
+        const parts = (reconstructedMemory || "").split(/(\s+)/).filter(function(p){ return p.length > 0; });
+        const segments = parts.map(function(part) {
+          const trimmed = part.trim().toLowerCase();
+          const isCreative = trimmed.length > 0 && /[a-z]/.test(trimmed) && !origWords.has(trimmed);
+          return { text: part, isQuietRewriteChange: isCreative };
+        });
+        return { original: originalMemory || "", reconstructedSegments: segments };
+      }
+      function toHighlightedHtml(segments) {
+        return segments.map(function(seg) {
+          if (seg.isQuietRewriteChange) {
+            return '<mark class="quiet-rewrite">' + seg.text + '</mark>';
+          }
+          return seg.text;
+        }).join("");
+      }
+      return { compare: compare, toHighlightedHtml: toHighlightedHtml };
+    }
+
+    // Populate the reveal side-by-side (called on showView('reveal') or after steps).
+    // Uses stashed local-only original + lastReconstructResult (from #6 one-call). Falls back to demo oak for view-switcher.
+    // Highlights via the browser comparator port (Quiet Rewrite only).
+    function populateReveal() {
+      try {
+        var origEl = document.getElementById('original-memory-display');
+        var reconEl = document.getElementById('reconstructed-memory-display');
+        var orig = currentOriginalMemory || OAK_FOR_DEMO;
+        var recon = (window.lastReconstructResult && window.lastReconstructResult.reconstructed_memory) || OAK_RECONSTRUCTED_SAMPLE || OAK_FOR_DEMO;
+        if (origEl) origEl.textContent = orig;
+        if (reconEl) {
+          var comp = createBrowserRevealComparator();
+          var res = comp.compare(orig, recon);
+          reconEl.innerHTML = comp.toHighlightedHtml(res.reconstructedSegments);
+        }
+      } catch (e) { /* non-fatal for demo */ }
+    }
+
     let currentSim = null;
     let waveTimer = null;
     let fightActive = false;
+    let currentOriginalMemory = null; // client-local only for reveal comparator (round duration; cleared on reset/new). Never sent. Per #8 + privacy.
 
     function showView(name) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -260,11 +306,17 @@
         // Auto-init a demo fight when switching to the (now live) view
         initFight(OAK_FOR_DEMO);
       }
+      if (name === 'reveal') {
+        // #8: populate side-by-side (local original + recon from last result or demo) with Quiet Rewrite highlights.
+        // Works after #7 progressive or direct view switcher (demo fallback).
+        populateReveal();
+      }
     }
 
     function initFight(mem) {
       stopWaves(); // clean any prior
       currentSim = createBrowserFuzzSimulator(mem);
+      currentOriginalMemory = mem; // #8: stash original Memory locally only (for reveal comparator side-by-side + Quiet Rewrite highlights). Cleared on reset. Never leaves box.
       fightActive = false;
       const ta = document.getElementById('fight-ta');
       if (ta) {
@@ -435,6 +487,7 @@
     function resetAll() {
       stopWaves();
       currentSim = null;
+      currentOriginalMemory = null; // #8: clear local original (reveal comparator only; privacy + instant new round per AC + PRD).
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('view-memory').classList.add('active');
       // Clear any end panel state if visible in other flow
@@ -486,7 +539,7 @@
             const memTaNow = document.querySelector('#view-memory textarea');
             const mem = (memTaNow && memTaNow.value.trim()) ? memTaNow.value.trim() : OAK_FOR_DEMO;
             showView('fight');
-            initFight(mem);
+            initFight(mem); // also sets currentOriginalMemory for #8 reveal side-by-side + Quiet Rewrite highlights (local only)
           };
         }
       });

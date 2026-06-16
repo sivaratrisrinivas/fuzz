@@ -424,4 +424,20 @@ describe("side-by-side reveal with Quiet Rewrite highlights via Reveal Comparato
     expect(html).toContain("original Memory");
     expect(html).toContain("local only");
   });
+
+  test("Source contains local original Memory stash (currentOriginalMemory), browser port of Reveal Comparator, and reveal population logic wiring (from lastReconstructResult + original for side-by-side after #7) (UI tracer B2)", async () => {
+    // RED for wiring: will fail until GREEN adds the JS (let currentOriginalMemory, createBrowserRevealComparator mirroring the .ts, populate fn, calls in showView/init/reset, use of comparator for innerHTML on recon display).
+    // Observable in public html/script source. Full flow: init fight sets stash (original local only), stop + #7 steps, then reveal button/show populates using #6 result.reconstructed_memory + comparator.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    expect(html).toContain("currentOriginalMemory");
+    expect(html).toContain("createBrowserRevealComparator");
+    expect(html).toContain("reconstructedSegments");
+    expect(html).toContain("toHighlightedHtml");
+    expect(html).toContain("lastReconstructResult");
+    expect(html).toContain("showView('reveal')");
+    // References issue #8 + prior
+    expect(html).toContain("issue #8");
+  });
 });
