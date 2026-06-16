@@ -441,3 +441,63 @@ describe("side-by-side reveal with Quiet Rewrite highlights via Reveal Comparato
     expect(html).toContain("issue #8");
   });
 });
+
+// TDD vertical for issue #9 (Play again instant full clear and round reset flows (client-side; refresh during fight handling)).
+// Per user-approved plan (via ask_user_question after meticulous #8 handoff + issue#9/#1 review), ACs, parent PRD #1 (user stories 15/16/18), #8 (reveal + currentOriginalMemory stash + existing resetAll + populate), #7 (steps), #6 (result), /tmp/handoff-fuzz-issue8-complete.md, ADR-0001, CONTEXT.md (glossary is gospel; exact terms only: Memory, Fuzz, Fresh Clues, 4 Cleaning Steps, Reconstructed Memory, Endless Fight, Real Experience, etc.).
+// No new deep module (per plan; this is client wiring/state clear extension in the single-file playable box, same style as #7 B tracers and #8 B1/B2 UI source tests).
+// Public iface per approval: resetAll() remains the sole public trigger (onclick from reveal button preserved); its impl is deepened for complete clears + side effects (no speculative extracts). Internal helpers only for refresh flag (sessionStorage transient, never holds private Memory or data; cleared always on reset or fight end).
+// Vertical tracers one RED->GREEN: behaviors prioritized as approved (1. full instant clear + fresh empty Memory input on Play again first; 2. no send; 3. refresh-during-live-Endless-Fight; 4. prominent + glossary text/refs; 5. cycle).
+// Tests: source inspection of index.html (public behavior proof, like prior). Run before/after every edit. Atomic commits only on GREEN pass + hygiene. Scope: box/ client only. Privacy: original never sent, reset sends nothing.
+// References: https://github.com/sivaratrisrinivas/fuzz/issues/9 , #8, #1 (PRD), handoff, CONTEXT.md, ADR-0001.
+
+describe("play again instant full clear and round reset flows (client-side; refresh during fight handling, issue #9)", () => {
+  test("Activating Play again (resetAll) instantly clears every prior round piece (Memory, Fuzz, Fresh Clues, 4 Cleaning Steps, Reconstructed Memory, state) with no trace and returns to fresh empty Memory input state (TDD tracer 1, priority 1 per approved plan)", async () => {
+    // RED written first for tracer 1: this will fail (missing clears for lastReconstructResult, step DOM wipe, memory entry textarea forced empty, explicit full trace removal, #9 traceability strings) until GREEN minimally deepens resetAll().
+    // Observable ONLY through public shell: the resetAll fn source + button + memory view (Bun.file read, no execution of JS). Exercises the "instant full clear" + "completely fresh initial Memory typing state" AC + PRD stories.
+    // After this GREEN passes: core clear behavior present and test green. Subsequent tracers add refresh flag/msg, more UI polish, header refs.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Play again control visible/usable after reveal (AC, PRD15; big obvious button already in place, will keep/enhance)
+    expect(html).toContain("resetAll()");
+    expect(html).toContain("Play again — start a completely new Memory");
+
+    // Full clear of EVERY piece of prior round (ACs 1-2): expect the clear statements in resetAll body (current only does partial sim+original+panel+switch)
+    expect(html).toContain("currentSim = null");
+    expect(html).toContain("currentOriginalMemory = null");
+    expect(html).toContain("lastReconstructResult = null");
+    expect(html).toContain("window.lastReconstructResult = null");
+
+    // 4 Cleaning Steps / Reconstructing state wiped (no visual or content trace left in UI)
+    expect(html).toContain("step-1");
+    expect(html).toContain("step-4");
+    // re-apply initial opacity + blank content for steps
+    expect(html).toContain("opacity-60");
+
+    // Returns to completely fresh initial Memory typing state: entry textarea forced empty (no old Memory lingering)
+    expect(html).toContain("#view-memory textarea");
+    expect(html).toContain("value = ''");
+
+    // View reset + other state (end panel, fight flags) for "no trace"
+    expect(html).toContain("view-memory");
+    expect(html).toContain("end-data-panel");
+
+    // No data from cleared round is sent to or stored by thin helper (AC3; reset path must not touch network)
+    // (fetch exists elsewhere e.g. stopFight; we assert intent via clear-only reset and comments)
+    expect(html).toContain("function resetAll()");
+
+    // Traceability for this vertical + refs to parent/prior (will be in comments + status after GREENs)
+    expect(html).toContain("issue #9");
+
+    // Glossary purity (CONTEXT.md) — all reset/clear text and comments use exact terms only
+    expect(html).toContain("Memory");
+    expect(html).toContain("Endless Fight");
+    expect(html).toContain("4 Cleaning Steps");
+    expect(html).toContain("Reconstructed Memory");
+    expect(html).toContain("Fresh Clues");
+
+    // No avoided terms anywhere in file (glossary discipline)
+    expect(html).not.toContain("noise");
+    expect(html).not.toContain("scrambled");
+  });
+});

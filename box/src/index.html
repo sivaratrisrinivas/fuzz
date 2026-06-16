@@ -488,11 +488,29 @@
       stopWaves();
       currentSim = null;
       currentOriginalMemory = null; // #8: clear local original (reveal comparator only; privacy + instant new round per AC + PRD).
+      window.lastReconstructResult = null; // #9: clear Reconstructed Memory + result state (from #6 one-call) — no trace of prior 4 Cleaning Steps or Quiet Rewrite
+      // #9: wipe 4 Cleaning Steps UI traces (content + complete visuals) + status for full instant clear of Reconstructing state (no leftover in UI)
+      for (let n = 1; n <= 4; n++) {
+        const el = document.getElementById('step-' + n);
+        if (el) {
+          el.classList.add('opacity-60');
+          const c = el.querySelector('.step-content');
+          if (c) c.textContent = '';
+        }
+      }
+      const statusEl = document.getElementById('reconstruct-status');
+      if (statusEl) {
+        statusEl.textContent = 'The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the Fuzz using the Fresh Clues. Watch the slow clean-up (Sand Drawing metaphor) as steps appear progressively.';
+      }
+      // #9: force fresh initial Memory typing state — entry textarea emptied (completely new Memory ready; prior Memory/Fuzz/etc gone)
+      const memTa = document.querySelector('#view-memory textarea');
+      if (memTa) memTa.value = '';
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('view-memory').classList.add('active');
       // Clear any end panel state if visible in other flow
       const panel = document.getElementById('end-data-panel');
       if (panel) panel.classList.add('hidden');
+      // #9 issue #9: Play again instant full clear — all round pieces (Memory, Fuzz, Fresh Clues, 4 Cleaning Steps, Reconstructed Memory, state) forgotten client-side only. Nothing sent to thin helper. Per ACs + PRD #1 + #8 base.
     }
 
     function wireFightControls() {
