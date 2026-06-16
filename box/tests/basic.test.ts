@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { FuzzSimulator } from "../src/fuzz-simulator";
+import { RevealComparator } from "../src/reveal-comparator";
 
 // TDD tracer for issue #2: basic test harness skeleton for the live fight box.
 // This test confirms the first prioritized behavior: "Project shells + basic test harnesses created; bun test runs and passes on the skeletons".
@@ -311,5 +312,32 @@ describe("fuzz simulator (deep module for live Endless Fight + Perfect Help, iss
     }
     // No original as separate (contract)
     expect(Object.keys(end)).toEqual(["final_fuzz", "fresh_clues"]);
+  });
+});
+
+// TDD vertical for issue #8 (Side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator plus short Feeling Lesson message).
+// Follows approved plan from user, issue #8 ACs/body, parent PRD #1 (user story 14 etc), prior #7 (progressive steps after stop) + #6 (result shape with reconstructed_memory), handoff (post HF wiring verified), ADR-0001, CONTEXT.md (glossary is gospel; use exact terms only).
+// Reveal Comparator is the deep client module (small public iface, complex diff impl hidden; modeled on FuzzSimulator.ts). It identifies *only* the Quiet Rewrite diffs (Creative Guessing changes in final Reconstructed Memory vs client-local original Memory) for simple visual highlights on the recon side of side-by-side.
+// Isolation tests first (public iface only). Later: UI source tests + wiring in html (using browser port of same logic). Original Memory stashed locally only (per plan). Short glossary message. Full happy path (fight stop -> #7 steps -> reveal side-by-side + highlights + short msg) demoable after.
+// TDD: RED first (this test), minimal GREEN for current behavior, one tracer per priority. No changes outside box/. References: https://github.com/sivaratrisrinivas/fuzz/issues/8 , https://github.com/sivaratrisrinivas/fuzz/issues/1 , #6/#7, /tmp/handoff-fuzz-hf-mcp-wiring-verified.md , docs/adr/0001-..., CONTEXT.md.
+// All terminology: exact locked glossary only. No avoided terms.
+
+const OAK_RECONSTRUCTED_SAMPLE = "The ancient oak tree by the gentle river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.";
+
+describe("reveal comparator (deep module for side-by-side with Quiet Rewrite highlights via Reveal Comparator, issue #8)", () => {
+  test("Reveal Comparator module exists with glossary purity, start state, and basic compare returns structure using oak sample from reconstruction (first TDD tracer for #8, per approved plan priority 1)", () => {
+    // RED written first: this will fail (cannot find module or no export/class) until GREEN creates src/reveal-comparator.ts exporting the class + minimal impl.
+    // Public observable (per tdd): module loads, constructor, compare(original, recon) returns {original, reconstructedSegments: TextSegment[] } shape.
+    // Uses the exact OAK from placeholder + sample-reconstruction-01.md (final after Quiet Rewrite). Basic for structure; isQuietRewriteChange assertions + creative diff logic in next tracers.
+    // Glossary discipline in this test file + will be in the module source.
+    const comp = new RevealComparator();
+    const comparison = comp.compare(OAK_MEMORY, OAK_RECONSTRUCTED_SAMPLE);
+    expect(typeof comparison).toBe("object");
+    expect(comparison).toHaveProperty("original");
+    expect(comparison).toHaveProperty("reconstructedSegments");
+    expect(comparison.original).toBe(OAK_MEMORY);
+    expect(Array.isArray(comparison.reconstructedSegments)).toBe(true);
+    expect(comparison.reconstructedSegments.length).toBeGreaterThan(0);
+    // (Segments will have .text and .isQuietRewriteChange per proposed+approved iface.)
   });
 });
