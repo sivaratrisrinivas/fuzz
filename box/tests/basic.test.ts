@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { FuzzSimulator } from "../src/fuzz-simulator";
+import { RevealComparator } from "../src/reveal-comparator";
 
 // TDD tracer for issue #2: basic test harness skeleton for the live fight box.
 // This test confirms the first prioritized behavior: "Project shells + basic test harnesses created; bun test runs and passes on the skeletons".
@@ -311,5 +312,232 @@ describe("fuzz simulator (deep module for live Endless Fight + Perfect Help, iss
     }
     // No original as separate (contract)
     expect(Object.keys(end)).toEqual(["final_fuzz", "fresh_clues"]);
+  });
+});
+
+// TDD vertical for issue #8 (Side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator plus short Feeling Lesson message).
+// Follows approved plan from user, issue #8 ACs/body, parent PRD #1 (user story 14 etc), prior #7 (progressive steps after stop) + #6 (result shape with reconstructed_memory), handoff (post HF wiring verified), ADR-0001, CONTEXT.md (glossary is gospel; use exact terms only).
+// Reveal Comparator is the deep client module (small public iface, complex diff impl hidden; modeled on FuzzSimulator.ts). It identifies *only* the Quiet Rewrite diffs (Creative Guessing changes in final Reconstructed Memory vs client-local original Memory) for simple visual highlights on the recon side of side-by-side.
+// Isolation tests first (public iface only). Later: UI source tests + wiring in html (using browser port of same logic). Original Memory stashed locally only (per plan). Short glossary message. Full happy path (fight stop -> #7 steps -> reveal side-by-side + highlights + short msg) demoable after.
+// TDD: RED first (this test), minimal GREEN for current behavior, one tracer per priority. No changes outside box/. References: https://github.com/sivaratrisrinivas/fuzz/issues/8 , https://github.com/sivaratrisrinivas/fuzz/issues/1 , #6/#7, /tmp/handoff-fuzz-hf-mcp-wiring-verified.md , docs/adr/0001-..., CONTEXT.md.
+// All terminology: exact locked glossary only. No avoided terms.
+
+const OAK_RECONSTRUCTED_SAMPLE = "The ancient oak tree by the gentle river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.";
+
+describe("reveal comparator (deep module for side-by-side with Quiet Rewrite highlights via Reveal Comparator, issue #8)", () => {
+  test("Reveal Comparator module exists with glossary purity, start state, and basic compare returns structure using oak sample from reconstruction (first TDD tracer for #8, per approved plan priority 1)", () => {
+    // RED written first: this will fail (cannot find module or no export/class) until GREEN creates src/reveal-comparator.ts exporting the class + minimal impl.
+    // Public observable (per tdd): module loads, constructor, compare(original, recon) returns {original, reconstructedSegments: TextSegment[] } shape.
+    // Uses the exact OAK from placeholder + sample-reconstruction-01.md (final after Quiet Rewrite). Basic for structure; isQuietRewriteChange assertions + creative diff logic in next tracers.
+    // Glossary discipline in this test file + will be in the module source.
+    const comp = new RevealComparator();
+    const comparison = comp.compare(OAK_MEMORY, OAK_RECONSTRUCTED_SAMPLE);
+    expect(typeof comparison).toBe("object");
+    expect(comparison).toHaveProperty("original");
+    expect(comparison).toHaveProperty("reconstructedSegments");
+    expect(comparison.original).toBe(OAK_MEMORY);
+    expect(Array.isArray(comparison.reconstructedSegments)).toBe(true);
+    expect(comparison.reconstructedSegments.length).toBeGreaterThan(0);
+    // (Segments will have .text and .isQuietRewriteChange per proposed+approved iface.)
+  });
+
+  test("Reveal Comparator detects Quiet Rewrite creative changes (Creative Guessing diffs) vs original while leaving clue-restored exact parts unmarked (TDD tracer 2, per approved plan priority 2)", () => {
+    // RED written first for priority 2: current minimal impl marks nothing as change (all false). This will fail the hasChange asserts until GREEN adds detection logic in compare (private helper).
+    // Per AC + sample-reconstruction-01.md notes: Quiet Rewrite (step 4 quiet pass) introduces visible Creative Guessing changes e.g. "ancient", "gentle", "wide shade", "drifting down" so it is not an Exact Copy.
+    // Fresh Clues / Perfect Help restorations (e.g. "oak tree", "silver thread") must remain unmarked (exact in recon == original).
+    // Tests only public compare result (segments). Uses exact oak sample.
+    const comp = new RevealComparator();
+    const comparison = comp.compare(OAK_MEMORY, OAK_RECONSTRUCTED_SAMPLE);
+    const segs = comparison.reconstructedSegments;
+
+    const hasChangeFlagFor = (needle: string) =>
+      segs.some((s) => s.text.toLowerCase().includes(needle.toLowerCase()) && s.isQuietRewriteChange);
+    const hasUnchangedFor = (needle: string) =>
+      segs.some((s) => s.text.toLowerCase().includes(needle.toLowerCase()) && !s.isQuietRewriteChange);
+
+    // Quiet Rewrite creative changes (from Training + Creative Guessing in final Best Guess / Quiet Rewrite)
+    expect(hasChangeFlagFor("ancient")).toBe(true);   // "old" -> "ancient"
+    expect(hasChangeFlagFor("gentle")).toBe(true);    // context for river in quiet pass
+    expect(hasChangeFlagFor("wide")).toBe(true);      // "shade" -> "wide shade"
+    expect(hasChangeFlagFor("drifting")).toBe(true);  // "before they fell" -> "... drifting down"
+    expect(hasChangeFlagFor("down")).toBe(true);
+
+    // Restored exact via Fresh Clues at right Fuzz Levels (Perfect Help); must not be flagged as Quiet Rewrite.
+    // (Note: ws-split means multi-word clues like "oak tree" appear as separate tokens "oak" "tree"; use distinctive single tokens.)
+    expect(hasUnchangedFor("oak")).toBe(true);
+    expect(hasUnchangedFor("silver")).toBe(true);
+    expect(hasUnchangedFor("river")).toBe(true); // the base word was clue-provided, not a creative rewrite invention
+  });
+
+  test("Reveal Comparator produces usable highlight HTML (wraps Quiet Rewrite changes in <mark class=\"quiet-rewrite\">) for direct browser render (TDD tracer 3, per approved plan priority 3)", () => {
+    // Exercises the toHighlightedHtml convenience (approved iface) on segments with real Quiet Rewrite flags from prior logic.
+    // Produces browser-ready markup with marks only around creative changes for the recon column side-by-side.
+    // (The browser port in index.html will use an equivalent for the live reveal after #7 steps.)
+    const comp = new RevealComparator();
+    const comparison = comp.compare(OAK_MEMORY, OAK_RECONSTRUCTED_SAMPLE);
+    const html = comp.toHighlightedHtml(comparison.reconstructedSegments);
+    // Quiet changes get marked
+    expect(html).toContain('<mark class="quiet-rewrite">ancient</mark>');
+    expect(html).toContain('<mark class="quiet-rewrite">gentle</mark>');
+    expect(html).toContain('<mark class="quiet-rewrite">wide</mark>');
+    // Clue-restored / exact parts are plain (not marked)
+    expect(html).not.toContain('<mark class="quiet-rewrite">oak</mark>');
+    expect(html).not.toContain('<mark class="quiet-rewrite">silver</mark>');
+    expect(html.length).toBeGreaterThan(100);
+  });
+});
+
+// TDD vertical for issue #8 UI layer (side-by-side reveal + Quiet Rewrite highlights via Reveal Comparator + short Feeling Lesson).
+// Builds on the now-complete deep module (tracers 1-3) + prior #7 progressive + #6 result (reconstructed_memory).
+// Tests are source inspection of index.html (public shell) + will drive the population logic, stash for local original Memory (client-only),
+// browser port of comparator, short msg, and wiring so that after #7 steps the "See ... Quiet Rewrite" button leads to populated side-by-side.
+// Per approved plan, #8 ACs, CONTEXT.md glossary (all terms), no auto-advance change to reconstructing view.
+// One RED->GREEN at a time for the UI behaviors.
+
+describe("side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator plus short Feeling Lesson message (issue #8)", () => {
+  test("Reveal view contains dynamic side-by-side containers (ids for original + reconstructed) and short explanatory Feeling Lesson message using only glossary terms (UI tracer B1)", async () => {
+    // RED: will fail on missing ids / old long message / static example until GREEN updates the view-reveal section in index.html.
+    // Observable: new ids for population target, short msg text (Smart Robot + Training + Fresh Clues + Best Guess + Creative Guessing + Perfect Help + Quiet Rewrite + not Exact Copy + Real Experience + Feeling Lesson), glossary.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Dynamic containers (replaces the static example divs; populated from currentOriginalMemory + lastReconstructResult + browser comparator)
+    expect(html).toContain('id="original-memory-display"');
+    expect(html).toContain('id="reconstructed-memory-display"');
+
+    // Short explanatory message (one short per AC #3, not the previous long multi-sentence block).
+    // Use literals entirely within text nodes (no glossary <span> interrupting) or single terms; consistent with prior #7 UI tests that split around spans.
+    expect(html).toContain("used its ");
+    expect(html).toContain(" for a ");
+    expect(html).toContain(" via ");
+    expect(html).toContain(" is not an ");
+    expect(html).toContain(". You lived the ");
+    expect(html).toContain("Real Experience");
+    expect(html).toContain("Feeling Lesson");
+
+    // Traceability + #8
+    expect(html).toContain("issue #8");
+    expect(html).toContain("Reveal Comparator");
+
+    // Still glossary purity, references to prior
+    expect(html).toContain("Reconstructed Memory");
+    expect(html).toContain("original Memory");
+    expect(html).toContain("local only");
+  });
+
+  test("Source contains local original Memory stash (currentOriginalMemory), browser port of Reveal Comparator, and reveal population logic wiring (from lastReconstructResult + original for side-by-side after #7) (UI tracer B2)", async () => {
+    // RED for wiring: will fail until GREEN adds the JS (let currentOriginalMemory, createBrowserRevealComparator mirroring the .ts, populate fn, calls in showView/init/reset, use of comparator for innerHTML on recon display).
+    // Observable in public html/script source. Full flow: init fight sets stash (original local only), stop + #7 steps, then reveal button/show populates using #6 result.reconstructed_memory + comparator.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    expect(html).toContain("currentOriginalMemory");
+    expect(html).toContain("createBrowserRevealComparator");
+    expect(html).toContain("reconstructedSegments");
+    expect(html).toContain("toHighlightedHtml");
+    expect(html).toContain("lastReconstructResult");
+    expect(html).toContain("showView('reveal')");
+    // References issue #8 + prior
+    expect(html).toContain("issue #8");
+  });
+});
+
+// TDD vertical for issue #9 (Play again instant full clear and round reset flows (client-side; refresh during fight handling)).
+// Per user-approved plan (via ask_user_question after meticulous #8 handoff + issue#9/#1 review), ACs, parent PRD #1 (user stories 15/16/18), #8 (reveal + currentOriginalMemory stash + existing resetAll + populate), #7 (steps), #6 (result), /tmp/handoff-fuzz-issue8-complete.md, ADR-0001, CONTEXT.md (glossary is gospel; exact terms only: Memory, Fuzz, Fresh Clues, 4 Cleaning Steps, Reconstructed Memory, Endless Fight, Real Experience, etc.).
+// No new deep module (per plan; this is client wiring/state clear extension in the single-file playable box, same style as #7 B tracers and #8 B1/B2 UI source tests).
+// Public iface per approval: resetAll() remains the sole public trigger (onclick from reveal button preserved); its impl is deepened for complete clears + side effects (no speculative extracts). Internal helpers only for refresh flag (sessionStorage transient, never holds private Memory or data; cleared always on reset or fight end).
+// Vertical tracers one RED->GREEN: behaviors prioritized as approved (1. full instant clear + fresh empty Memory input on Play again first; 2. no send; 3. refresh-during-live-Endless-Fight; 4. prominent + glossary text/refs; 5. cycle).
+// Tests: source inspection of index.html (public behavior proof, like prior). Run before/after every edit. Atomic commits only on GREEN pass + hygiene. Scope: box/ client only. Privacy: original never sent, reset sends nothing.
+// References: https://github.com/sivaratrisrinivas/fuzz/issues/9 , #8, #1 (PRD), handoff, CONTEXT.md, ADR-0001.
+
+describe("play again instant full clear and round reset flows (client-side; refresh during fight handling, issue #9)", () => {
+  test("Activating Play again (resetAll) instantly clears every prior round piece (Memory, Fuzz, Fresh Clues, 4 Cleaning Steps, Reconstructed Memory, state) with no trace and returns to fresh empty Memory input state (TDD tracer 1, priority 1 per approved plan)", async () => {
+    // RED written first for tracer 1: this will fail (missing clears for lastReconstructResult, step DOM wipe, memory entry textarea forced empty, explicit full trace removal, #9 traceability strings) until GREEN minimally deepens resetAll().
+    // Observable ONLY through public shell: the resetAll fn source + button + memory view (Bun.file read, no execution of JS). Exercises the "instant full clear" + "completely fresh initial Memory typing state" AC + PRD stories.
+    // After this GREEN passes: core clear behavior present and test green. Subsequent tracers add refresh flag/msg, more UI polish, header refs.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Play again control visible/usable after reveal (AC, PRD15; big obvious button already in place, will keep/enhance)
+    expect(html).toContain("resetAll()");
+    expect(html).toContain("Play again — start a completely new Memory");
+
+    // Full clear of EVERY piece of prior round (ACs 1-2): expect the clear statements in resetAll body (current only does partial sim+original+panel+switch)
+    expect(html).toContain("currentSim = null");
+    expect(html).toContain("currentOriginalMemory = null");
+    expect(html).toContain("lastReconstructResult = null");
+    expect(html).toContain("window.lastReconstructResult = null");
+
+    // 4 Cleaning Steps / Reconstructing state wiped (no visual or content trace left in UI)
+    expect(html).toContain("step-1");
+    expect(html).toContain("step-4");
+    // re-apply initial opacity + blank content for steps
+    expect(html).toContain("opacity-60");
+
+    // Returns to completely fresh initial Memory typing state: entry textarea forced empty (no old Memory lingering)
+    expect(html).toContain("#view-memory textarea");
+    expect(html).toContain("value = ''");
+
+    // View reset + other state (end panel, fight flags) for "no trace"
+    expect(html).toContain("view-memory");
+    expect(html).toContain("end-data-panel");
+
+    // No data from cleared round is sent to or stored by thin helper (AC3; reset path must not touch network)
+    // (fetch exists elsewhere e.g. stopFight; we assert intent via clear-only reset and comments)
+    expect(html).toContain("function resetAll()");
+
+    // Traceability for this vertical + refs to parent/prior (will be in comments + status after GREENs)
+    expect(html).toContain("issue #9");
+
+    // Glossary purity (CONTEXT.md) — all reset/clear text and comments use exact terms only
+    expect(html).toContain("Memory");
+    expect(html).toContain("Endless Fight");
+    expect(html).toContain("4 Cleaning Steps");
+    expect(html).toContain("Reconstructed Memory");
+    expect(html).toContain("Fresh Clues");
+
+    // No avoided terms anywhere in file (glossary discipline)
+    expect(html).not.toContain("noise");
+    expect(html).not.toContain("scrambled");
+  });
+
+  test("Page refresh during live Endless Fight resets to starting empty Memory input state with gentle glossary message (TDD tracer for refresh, priority 3 per approved plan; covers no-data-on-reset as side)", async () => {
+    // RED for refresh resilience (AC4, PRD18): will fail until GREEN adds transient sessionStorage flag (set on live fight start, cleared on stop/reset/boot-consume), #reset-notice div in memory view, boot logic to detect+show gentle msg + force empty ta (override normal prefill) + clear flag. No private data in storage/ever sent.
+    // Observable in public source (html ids, script strings for sessionStorage, flag fns or direct, gentle text using exact terms, reset-notice). Full "during live" vs normal boot distinction.
+    // After GREEN: source proves the behavior; test passes. (Live reload sim via manual later; no data exposure by design.)
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Transient flag for "during live Endless Fight" detection (sessionStorage, never stores Memory/Fuzz/Clues/private; only bool signal; cleared fast)
+    expect(html).toContain("sessionStorage");
+    expect(html).toContain("setItem");
+    expect(html).toContain("getItem");
+    expect(html).toContain("removeItem");
+    // flag name or usage hints "fight" + "refresh" or "reset" during Endless Fight
+    expect(html).toContain("fuzzLiveFightRefreshFlag"); // or similar; will use in code
+    expect(html).toContain("Endless Fight");
+
+    // Gentle message UI affordance in starting Memory view (transient, only for refresh-during case)
+    expect(html).toContain("reset-notice");
+    expect(html).toContain("refreshed during the Endless Fight");
+    expect(html).toContain("prior Memory was private");
+    expect(html).toContain("completely new Memory");
+
+    // Boot logic forces empty on this path (starting empty Memory input state per AC)
+    expect(html).toContain("bootLiveFight");
+    expect(html).toContain("memTa");
+    expect(html).toContain("OAK_FOR_DEMO"); // normal prefill still present for other boots
+
+    // Clear flag also on resetAll / stop (so only live during triggers it; normal post-fight reloads don't falsely show "reset")
+    expect(html).toContain("resetAll");
+    expect(html).toContain("stopWaves");
+
+    // Glossary + #9 refs (in new code + existing)
+    expect(html).toContain("issue #9");
+    expect(html).toContain("Memory");
+    expect(html).toContain("Endless Fight");
+
+    // Still no avoided
+    expect(html).not.toContain("noise");
   });
 });

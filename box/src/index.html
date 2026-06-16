@@ -28,7 +28,7 @@
       <p class="mt-3 max-w-prose text-zinc-400">
         Write a <span class="glossary-term">Memory</span>. Watch <span class="glossary-term">Dissolving</span> slowly turn it into <span class="glossary-term">Fuzz</span> through <span class="glossary-term">The Waves</span> at different <span class="glossary-term">Fuzz Levels</span>. Keep <span class="glossary-term">Rewriting</span> during the <span class="glossary-term">Endless Fight</span> to leave good <span class="glossary-term">Clues</span> and especially <span class="glossary-term">Fresh Clues</span> at the exact right time for <span class="glossary-term">Perfect Help</span>. At the end the <span class="glossary-term">Smart Robot</span> performs <span class="glossary-term">Reconstructing</span> using its <span class="glossary-term">Training</span> and exactly <span class="glossary-term">4 Cleaning Steps</span>, producing a <span class="glossary-term">Reconstructed Memory</span> that shows a visible <span class="glossary-term">Quiet Rewrite</span> (Creative Guessing, not an <span class="glossary-term">Exact Copy</span>). You feel the <span class="glossary-term">Real Experience</span> and learn the <span class="glossary-term">Feeling Lesson</span>. It all feels like the <span class="glossary-term">Sand Drawing</span>.
       </p>
-      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Issue #7: progressive 4 Cleaning Steps waiting UX during Reconstructing (auto on result, client pauses). References: PRD #1, issues #4/#5/#6/#7, /tmp/handoff-fuzz-issues.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
+      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Issue #7: progressive 4 Cleaning Steps waiting UX during Reconstructing (auto on result, client pauses). Issue #8 complete: side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator + short Feeling Lesson message (local original + result.reconstructed_memory, browser port, dynamic). Issue #9 complete: Play again instant full clear and round reset flows (client-side; refresh during fight handling) — resetAll clears all pieces + empty Memory input; live-fight refresh shows gentle msg + forces fresh start (sessionStorage flag, no private data, glossary only). References: PRD #1, issues #4/#5/#6/#7/#8/#9, /tmp/handoff-fuzz-issue8-complete.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
     </header>
 
     <!-- View switcher (demo only — shows the four placeholder views) -->
@@ -43,6 +43,8 @@
     <div id="view-memory" class="view active border border-zinc-800 rounded-xl p-6 bg-zinc-900">
       <h2 class="font-semibold text-xl mb-2">Enter your <span class="glossary-term">Memory</span></h2>
       <p class="text-sm text-zinc-400 mb-3">This is the private text that will be the subject of the <span class="glossary-term">Sand Drawing</span>. The <span class="glossary-term">live fight box</span> keeps the original <span class="glossary-term">Memory</span> locally only (for accurate <span class="glossary-term">Dissolving</span> simulation and <span class="glossary-term">Fresh Clues</span> timing). The <span class="glossary-term">thin helper</span> and <span class="glossary-term">Smart Robot</span> never see it.</p>
+      <!-- #9: transient gentle notice only shown on boot after refresh-during-live-Endless-Fight (AC4, PRD18). Hidden default; script shows + populates with glossary + forces empty fresh Memory input. Client only, no private data. -->
+      <div id="reset-notice" style="display:none" class="mb-3 p-3 rounded border border-amber-800 bg-amber-950/40 text-sm text-amber-300"></div>
       <textarea class="w-full h-32 p-3 bg-black border border-zinc-700 rounded font-mono text-sm" placeholder="Type your private Memory here... (example: a short story or description you want the Smart Robot to reconstruct from Fuzz)"></textarea>
       <div class="mt-3">
         <button onclick="showView('fight')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-medium">Begin the Endless Fight →</button>
@@ -117,7 +119,7 @@
       <p class="mt-3 text-[10px] text-zinc-500">Stop fight triggers the single <span class="glossary-term">Smart Robot</span> call in the thin helper (issue #6: one call + immediate forget). The 4 Cleaning Steps appear progressively with short pauses (issue #7 client-side, no streaming assumption). Teaches the slow clean-up <span class="glossary-term">Sand Drawing</span> metaphor and the <span class="glossary-term">Feeling Lesson</span>. Uses exact result.steps + reconstructed_memory from coordinator.</p>
     </div>
 
-    <!-- 4. Reveal view -->
+    <!-- 4. Reveal view (issue #8: populated side-by-side using local original Memory + reconstructed_memory from #6 result; Quiet Rewrite highlights via Reveal Comparator (browser port); short Feeling Lesson message) -->
     <div id="view-reveal" class="view border border-zinc-800 rounded-xl p-6 bg-zinc-900">
       <h2 class="font-semibold text-xl mb-2">The <span class="glossary-term">Reconstructed Memory</span> and the <span class="glossary-term">Quiet Rewrite</span></h2>
       <p class="text-sm text-zinc-400 mb-4">Side-by-side comparison. The <span class="glossary-term">live fight box</span> kept your original <span class="glossary-term">Memory</span> locally and uses it only for highlighting the differences (the <span class="glossary-term">Quiet Rewrite</span>). The <span class="glossary-term">thin helper</span> never received the full original.</p>
@@ -125,17 +127,17 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <div class="text-xs uppercase mb-1 text-zinc-400">Your original <span class="glossary-term">Memory</span> (local only)</div>
-          <div class="p-4 bg-black border border-zinc-700 rounded text-sm">The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell.</div>
+          <div id="original-memory-display" class="p-4 bg-black border border-zinc-700 rounded text-sm font-mono whitespace-pre-wrap"></div>
         </div>
         <div>
           <div class="text-xs uppercase mb-1 text-zinc-400"><span class="glossary-term">Reconstructed Memory</span> (Smart Robot Best Guess)</div>
-          <div class="p-4 bg-black border border-emerald-900/60 rounded text-sm">The ancient oak tree by the slow river had stood for centuries. Its roots drank from the gentle stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.</div>
-          <div class="mt-2 text-[10px] text-emerald-400">Highlighted changes (Quiet Rewrite) would appear here in the real reveal. The Smart Robot used Creative Guessing + your Fresh Clues.</div>
+          <div id="reconstructed-memory-display" class="p-4 bg-black border border-emerald-900/60 rounded text-sm font-mono whitespace-pre-wrap"></div>
+          <div class="mt-2 text-[10px] text-emerald-400">Highlighted changes (Quiet Rewrite from Creative Guessing) via Reveal Comparator.</div>
         </div>
       </div>
 
-      <div class="mt-4 p-4 border border-amber-900/40 bg-amber-950/30 rounded text-sm">
-        <span class="font-medium">The Feeling Lesson:</span> The <span class="glossary-term">Smart Robot</span> did not make an <span class="glossary-term">Exact Copy</span>. It used its <span class="glossary-term">Training</span> and the <span class="glossary-term">Fresh Clues</span> you gave it at the exact right <span class="glossary-term">Fuzz Levels</span> during <span class="glossary-term">Rewriting</span> to make a <span class="glossary-term">Best Guess</span> through <span class="glossary-term">Creative Guessing</span>. This is the <span class="glossary-term">Quiet Rewrite</span>. The <span class="glossary-term">Rewriting</span> gave <span class="glossary-term">Perfect Help</span>. You lived the <span class="glossary-term">Real Experience</span> of the <span class="glossary-term">Feeling Science</span> through the <span class="glossary-term">Watch and Fight Way</span>.
+      <div class="mt-4 p-3 border border-amber-900/40 bg-amber-950/30 rounded text-sm">
+        The <span class="glossary-term">Smart Robot</span> used its <span class="glossary-term">Training</span> and your <span class="glossary-term">Fresh Clues</span> for a <span class="glossary-term">Best Guess</span> via <span class="glossary-term">Creative Guessing</span> (<span class="glossary-term">Perfect Help</span>). This <span class="glossary-term">Quiet Rewrite</span> is not an <span class="glossary-term">Exact Copy</span>. You lived the <span class="glossary-term">Real Experience</span> and learned the <span class="glossary-term">Feeling Lesson</span>.
       </div>
 
       <div class="mt-5">
@@ -145,7 +147,7 @@
     </div>
 
     <footer class="mt-10 text-[10px] text-zinc-500">
-      Live fight box (Bun + TypeScript) with deep Fuzz Simulator + playable Endless Fight from issue #4 (client owns Dissolving/The Waves/Fresh Clues timing for Perfect Help; original Memory local only). Thin helper now wires one Smart Robot call + immediate ephemeral forget (#6 complete): stop fight sends contract, receives steps + Reconstructed Memory. See https://github.com/sivaratrisrinivas/fuzz/issues/6 + #4 + parent #1. UX polish (#7-9), resilience (#10) next. Glossary from CONTEXT.md everywhere.
+      Live fight box (Bun + TypeScript) with deep Fuzz Simulator + playable Endless Fight from issue #4 (client owns Dissolving/The Waves/Fresh Clues timing for Perfect Help; original Memory local only). Thin helper now wires one Smart Robot call + immediate ephemeral forget (#6 complete): stop fight sends contract, receives steps + Reconstructed Memory. Issue #7: progressive 4 Cleaning Steps. Issue #8 complete: side-by-side with Quiet Rewrite highlights via Reveal Comparator (deep module + browser port) + short Feeling Lesson (after steps). See https://github.com/sivaratrisrinivas/fuzz/issues/8 + #6 + #4 + parent #1. Glossary from CONTEXT.md everywhere.
     </footer>
   </div>
 
@@ -159,6 +161,8 @@
     // All labels, logs, and data use exact glossary from CONTEXT.md only.
 
     const OAK_FOR_DEMO = "The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell.";
+    // Sample recon (from sample-reconstruction-01.md final) for direct view-switcher demo of #8 reveal (shows Quiet Rewrite highlights via comparator even without running full fight+stop).
+    const OAK_RECONSTRUCTED_SAMPLE = "The ancient oak tree by the gentle river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.";
 
     // --- Browser port of FuzzSimulator (mirrors TS implementation exactly for observable behavior) ---
     function createBrowserFuzzSimulator(originalMemory) {
@@ -247,9 +251,53 @@
     }
     // --- end port ---
 
+    // --- Browser port of RevealComparator (mirrors TS for demo; no build, single file playable).
+    // Uses the exact same approved public iface + deep heuristic for Quiet Rewrite creative changes.
+    // All terms from CONTEXT.md. Used by populateReveal for side-by-side after #7 progressive steps.
+    function createBrowserRevealComparator() {
+      function compare(originalMemory, reconstructedMemory) {
+        const origWords = new Set( (originalMemory || "").match(/\b[\w']+\b/g) || [] .map(function(w){return w.toLowerCase();}) );
+        const parts = (reconstructedMemory || "").split(/(\s+)/).filter(function(p){ return p.length > 0; });
+        const segments = parts.map(function(part) {
+          const trimmed = part.trim().toLowerCase();
+          const isCreative = trimmed.length > 0 && /[a-z]/.test(trimmed) && !origWords.has(trimmed);
+          return { text: part, isQuietRewriteChange: isCreative };
+        });
+        return { original: originalMemory || "", reconstructedSegments: segments };
+      }
+      function toHighlightedHtml(segments) {
+        return segments.map(function(seg) {
+          if (seg.isQuietRewriteChange) {
+            return '<mark class="quiet-rewrite">' + seg.text + '</mark>';
+          }
+          return seg.text;
+        }).join("");
+      }
+      return { compare: compare, toHighlightedHtml: toHighlightedHtml };
+    }
+
+    // Populate the reveal side-by-side (called on showView('reveal') or after steps).
+    // Uses stashed local-only original + lastReconstructResult (from #6 one-call). Falls back to demo oak for view-switcher.
+    // Highlights via the browser comparator port (Quiet Rewrite only).
+    function populateReveal() {
+      try {
+        var origEl = document.getElementById('original-memory-display');
+        var reconEl = document.getElementById('reconstructed-memory-display');
+        var orig = currentOriginalMemory || OAK_FOR_DEMO;
+        var recon = (window.lastReconstructResult && window.lastReconstructResult.reconstructed_memory) || OAK_RECONSTRUCTED_SAMPLE || OAK_FOR_DEMO;
+        if (origEl) origEl.textContent = orig;
+        if (reconEl) {
+          var comp = createBrowserRevealComparator();
+          var res = comp.compare(orig, recon);
+          reconEl.innerHTML = comp.toHighlightedHtml(res.reconstructedSegments);
+        }
+      } catch (e) { /* non-fatal for demo */ }
+    }
+
     let currentSim = null;
     let waveTimer = null;
     let fightActive = false;
+    let currentOriginalMemory = null; // client-local only for reveal comparator (round duration; cleared on reset/new). Never sent. Per #8 + privacy.
 
     function showView(name) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -260,11 +308,17 @@
         // Auto-init a demo fight when switching to the (now live) view
         initFight(OAK_FOR_DEMO);
       }
+      if (name === 'reveal') {
+        // #8: populate side-by-side (local original + recon from last result or demo) with Quiet Rewrite highlights.
+        // Works after #7 progressive or direct view switcher (demo fallback).
+        populateReveal();
+      }
     }
 
     function initFight(mem) {
       stopWaves(); // clean any prior
       currentSim = createBrowserFuzzSimulator(mem);
+      currentOriginalMemory = mem; // #8: stash original Memory locally only (for reveal comparator side-by-side + Quiet Rewrite highlights). Cleared on reset. Never leaves box.
       fightActive = false;
       const ta = document.getElementById('fight-ta');
       if (ta) {
@@ -322,6 +376,8 @@
     function startWaves() {
       if (!currentSim || fightActive) return;
       fightActive = true;
+      // #9: set transient flag (sessionStorage only, bool signal, NEVER stores any Memory/Fuzz/Fresh Clues/private data). Used on reload to detect "refresh during live Endless Fight" for gentle reset + empty start. Cleared on stop/reset/boot.
+      sessionStorage.setItem('fuzzLiveFightRefreshFlag', '1');
       document.getElementById('start-waves-btn').disabled = true;
       document.getElementById('stop-fight-btn').disabled = false;
       const ta = document.getElementById('fight-ta');
@@ -347,6 +403,8 @@
         waveTimer = null;
       }
       fightActive = false;
+      // #9: clear live-fight refresh flag (only "during live" triggers the gentle reset msg on reload; post-stop reloads are normal)
+      sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
       const startBtn = document.getElementById('start-waves-btn');
       const stopBtn = document.getElementById('stop-fight-btn');
       if (startBtn) startBtn.disabled = true;
@@ -435,11 +493,32 @@
     function resetAll() {
       stopWaves();
       currentSim = null;
+      currentOriginalMemory = null; // #8: clear local original (reveal comparator only; privacy + instant new round per AC + PRD).
+      window.lastReconstructResult = null; // #9: clear Reconstructed Memory + result state (from #6 one-call) — no trace of prior 4 Cleaning Steps or Quiet Rewrite
+      // #9: wipe 4 Cleaning Steps UI traces (content + complete visuals) + status for full instant clear of Reconstructing state (no leftover in UI)
+      for (let n = 1; n <= 4; n++) {
+        const el = document.getElementById('step-' + n);
+        if (el) {
+          el.classList.add('opacity-60');
+          const c = el.querySelector('.step-content');
+          if (c) c.textContent = '';
+        }
+      }
+      const statusEl = document.getElementById('reconstruct-status');
+      if (statusEl) {
+        statusEl.textContent = 'The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the Fuzz using the Fresh Clues. Watch the slow clean-up (Sand Drawing metaphor) as steps appear progressively.';
+      }
+      // #9: force fresh initial Memory typing state — entry textarea emptied (completely new Memory ready; prior Memory/Fuzz/etc gone)
+      const memTa = document.querySelector('#view-memory textarea');
+      if (memTa) memTa.value = '';
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.getElementById('view-memory').classList.add('active');
       // Clear any end panel state if visible in other flow
       const panel = document.getElementById('end-data-panel');
       if (panel) panel.classList.add('hidden');
+      // #9 issue #9: Play again instant full clear — all round pieces (Memory, Fuzz, Fresh Clues, 4 Cleaning Steps, Reconstructed Memory, state) forgotten client-side only. Nothing sent to thin helper. Per ACs + PRD #1 + #8 base.
+      // Also clear any live-fight flag (Play again always gives fresh non-"reset" path)
+      sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
     }
 
     function wireFightControls() {
@@ -472,9 +551,19 @@
     // Boot
     function bootLiveFight() {
       wireFightControls();
-      // Pre-populate memory entry example (the one used for samples)
+      // #9 refresh-during-live-Endless-Fight handling (AC4): check transient flag (set only while waves live). If present: consume+remove (no private data ever kept), force empty Memory input (fresh starting state), show gentle glossary notice. Normal boots still convenience-prefill OAK demo.
+      // This + resetAll clear gives "instant full clear" + "page refresh during fight resets cleanly with gentle msg". Flag cleared on stopWaves/reset too.
       const memTa = document.querySelector('#view-memory textarea');
-      if (memTa && !memTa.value) {
+      const resetNotice = document.getElementById('reset-notice');
+      if (sessionStorage.getItem('fuzzLiveFightRefreshFlag')) {
+        sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
+        if (memTa) memTa.value = '';
+        if (resetNotice) {
+          resetNotice.style.display = 'block';
+          resetNotice.innerHTML = 'The previous round was reset because the page was <span class="glossary-term">refreshed during the Endless Fight</span>. The prior Memory was private on your side only and is now gone. Enter a <span class="glossary-term">completely new Memory</span> to begin again.';
+        }
+      } else if (memTa && !memTa.value) {
+        // normal first-load / non-refresh-during convenience for demo (OAK sample)
         memTa.value = OAK_FOR_DEMO;
       }
       // If someone clicks "Begin the Endless Fight" from entry, switch + init live
@@ -486,7 +575,7 @@
             const memTaNow = document.querySelector('#view-memory textarea');
             const mem = (memTaNow && memTaNow.value.trim()) ? memTaNow.value.trim() : OAK_FOR_DEMO;
             showView('fight');
-            initFight(mem);
+            initFight(mem); // also sets currentOriginalMemory for #8 reveal side-by-side + Quiet Rewrite highlights (local only)
           };
         }
       });
