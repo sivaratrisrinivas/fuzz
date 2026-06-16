@@ -340,4 +340,49 @@ describe("reveal comparator (deep module for side-by-side with Quiet Rewrite hig
     expect(comparison.reconstructedSegments.length).toBeGreaterThan(0);
     // (Segments will have .text and .isQuietRewriteChange per proposed+approved iface.)
   });
+
+  test("Reveal Comparator detects Quiet Rewrite creative changes (Creative Guessing diffs) vs original while leaving clue-restored exact parts unmarked (TDD tracer 2, per approved plan priority 2)", () => {
+    // RED written first for priority 2: current minimal impl marks nothing as change (all false). This will fail the hasChange asserts until GREEN adds detection logic in compare (private helper).
+    // Per AC + sample-reconstruction-01.md notes: Quiet Rewrite (step 4 quiet pass) introduces visible Creative Guessing changes e.g. "ancient", "gentle", "wide shade", "drifting down" so it is not an Exact Copy.
+    // Fresh Clues / Perfect Help restorations (e.g. "oak tree", "silver thread") must remain unmarked (exact in recon == original).
+    // Tests only public compare result (segments). Uses exact oak sample.
+    const comp = new RevealComparator();
+    const comparison = comp.compare(OAK_MEMORY, OAK_RECONSTRUCTED_SAMPLE);
+    const segs = comparison.reconstructedSegments;
+
+    const hasChangeFlagFor = (needle: string) =>
+      segs.some((s) => s.text.toLowerCase().includes(needle.toLowerCase()) && s.isQuietRewriteChange);
+    const hasUnchangedFor = (needle: string) =>
+      segs.some((s) => s.text.toLowerCase().includes(needle.toLowerCase()) && !s.isQuietRewriteChange);
+
+    // Quiet Rewrite creative changes (from Training + Creative Guessing in final Best Guess / Quiet Rewrite)
+    expect(hasChangeFlagFor("ancient")).toBe(true);   // "old" -> "ancient"
+    expect(hasChangeFlagFor("gentle")).toBe(true);    // context for river in quiet pass
+    expect(hasChangeFlagFor("wide")).toBe(true);      // "shade" -> "wide shade"
+    expect(hasChangeFlagFor("drifting")).toBe(true);  // "before they fell" -> "... drifting down"
+    expect(hasChangeFlagFor("down")).toBe(true);
+
+    // Restored exact via Fresh Clues at right Fuzz Levels (Perfect Help); must not be flagged as Quiet Rewrite.
+    // (Note: ws-split means multi-word clues like "oak tree" appear as separate tokens "oak" "tree"; use distinctive single tokens.)
+    expect(hasUnchangedFor("oak")).toBe(true);
+    expect(hasUnchangedFor("silver")).toBe(true);
+    expect(hasUnchangedFor("river")).toBe(true); // the base word was clue-provided, not a creative rewrite invention
+  });
+
+  test("Reveal Comparator produces usable highlight HTML (wraps Quiet Rewrite changes in <mark class=\"quiet-rewrite\">) for direct browser render (TDD tracer 3, per approved plan priority 3)", () => {
+    // Exercises the toHighlightedHtml convenience (approved iface) on segments with real Quiet Rewrite flags from prior logic.
+    // Produces browser-ready markup with marks only around creative changes for the recon column side-by-side.
+    // (The browser port in index.html will use an equivalent for the live reveal after #7 steps.)
+    const comp = new RevealComparator();
+    const comparison = comp.compare(OAK_MEMORY, OAK_RECONSTRUCTED_SAMPLE);
+    const html = comp.toHighlightedHtml(comparison.reconstructedSegments);
+    // Quiet changes get marked
+    expect(html).toContain('<mark class="quiet-rewrite">ancient</mark>');
+    expect(html).toContain('<mark class="quiet-rewrite">gentle</mark>');
+    expect(html).toContain('<mark class="quiet-rewrite">wide</mark>');
+    // Clue-restored / exact parts are plain (not marked)
+    expect(html).not.toContain('<mark class="quiet-rewrite">oak</mark>');
+    expect(html).not.toContain('<mark class="quiet-rewrite">silver</mark>');
+    expect(html.length).toBeGreaterThan(100);
+  });
 });

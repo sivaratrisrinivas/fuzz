@@ -46,22 +46,37 @@ export class RevealComparator {
    * Original returned verbatim for left column. Deep impl (diff strategy) is private.
    */
   compare(originalMemory: string, reconstructedMemory: string): RevealComparison {
-    // GREEN for priority 1 (structure tracer): minimal impl that satisfies public contract and first test.
-    // Splits on whitespace runs to produce segments (order-preserving). All marked non-change for this slice.
-    // Real Quiet Rewrite detection (only Creative Guessing diffs vs original, using sample evidence like "ancient"/"gentle"/"wide shade"/"drifting")
-    // will be added in next RED->GREEN (priority 2) without changing this public iface.
-    const segments: TextSegment[] = (reconstructedMemory || "")
-      .split(/(\s+)/)
-      .filter((part) => part.length > 0)
-      .map((part) => ({
-        text: part,
-        isQuietRewriteChange: false,
-      }));
-
+    // Now with Quiet Rewrite detection (GREEN for priority 2): uses private helper to mark only creative diffs
+    // (new word tokens from Training/Creative Guessing in the Quiet Rewrite / final Best Guess).
+    // Exact-matching words (incl. those restored by Fresh Clues / Perfect Help) stay unmarked (isQuietRewriteChange=false).
+    // This is the core behavior for side-by-side highlight of "not an Exact Copy".
+    const segments = this.computeQuietRewriteSegments(originalMemory || "", reconstructedMemory || "");
     return {
       original: originalMemory || "",
       reconstructedSegments: segments,
     };
+  }
+
+  /**
+   * Deep private: word-token heuristic to surface Quiet Rewrite (Creative Guessing) changes only.
+   * Collects base words present in original Memory. Any non-whitespace token in recon whose lowercased
+   * form is absent from original is treated as a Quiet Rewrite creative edit (flag true). This correctly
+   * highlights the sample's visible changes while leaving clue-restored exact spans unmarked.
+   * (Simple, no external diff lib, sufficient and demo-friendly for the Feeling Lesson.)
+   */
+  private computeQuietRewriteSegments(original: string, reconstructed: string): TextSegment[] {
+    const origWords = new Set(
+      (original.match(/\b[\w']+\b/g) || []).map((w) => w.toLowerCase())
+    );
+    return reconstructed.split(/(\s+)/).filter((part) => part.length > 0).map((part) => {
+      const trimmed = part.trim().toLowerCase();
+      // Flag only alphabetic-ish tokens that are inventions vs the original (the Quiet Rewrite / Creative Guessing)
+      const isCreativeChange = trimmed.length > 0 && /[a-z]/.test(trimmed) && !origWords.has(trimmed);
+      return {
+        text: part,
+        isQuietRewriteChange: isCreativeChange,
+      };
+    });
   }
 
   /**
