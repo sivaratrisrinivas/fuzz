@@ -386,3 +386,42 @@ describe("reveal comparator (deep module for side-by-side with Quiet Rewrite hig
     expect(html.length).toBeGreaterThan(100);
   });
 });
+
+// TDD vertical for issue #8 UI layer (side-by-side reveal + Quiet Rewrite highlights via Reveal Comparator + short Feeling Lesson).
+// Builds on the now-complete deep module (tracers 1-3) + prior #7 progressive + #6 result (reconstructed_memory).
+// Tests are source inspection of index.html (public shell) + will drive the population logic, stash for local original Memory (client-only),
+// browser port of comparator, short msg, and wiring so that after #7 steps the "See ... Quiet Rewrite" button leads to populated side-by-side.
+// Per approved plan, #8 ACs, CONTEXT.md glossary (all terms), no auto-advance change to reconstructing view.
+// One RED->GREEN at a time for the UI behaviors.
+
+describe("side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator plus short Feeling Lesson message (issue #8)", () => {
+  test("Reveal view contains dynamic side-by-side containers (ids for original + reconstructed) and short explanatory Feeling Lesson message using only glossary terms (UI tracer B1)", async () => {
+    // RED: will fail on missing ids / old long message / static example until GREEN updates the view-reveal section in index.html.
+    // Observable: new ids for population target, short msg text (Smart Robot + Training + Fresh Clues + Best Guess + Creative Guessing + Perfect Help + Quiet Rewrite + not Exact Copy + Real Experience + Feeling Lesson), glossary.
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Dynamic containers (replaces the static example divs; populated from currentOriginalMemory + lastReconstructResult + browser comparator)
+    expect(html).toContain('id="original-memory-display"');
+    expect(html).toContain('id="reconstructed-memory-display"');
+
+    // Short explanatory message (one short per AC #3, not the previous long multi-sentence block).
+    // Use literals entirely within text nodes (no glossary <span> interrupting) or single terms; consistent with prior #7 UI tests that split around spans.
+    expect(html).toContain("used its ");
+    expect(html).toContain(" for a ");
+    expect(html).toContain(" via ");
+    expect(html).toContain(" is not an ");
+    expect(html).toContain(". You lived the ");
+    expect(html).toContain("Real Experience");
+    expect(html).toContain("Feeling Lesson");
+
+    // Traceability + #8
+    expect(html).toContain("issue #8");
+    expect(html).toContain("Reveal Comparator");
+
+    // Still glossary purity, references to prior
+    expect(html).toContain("Reconstructed Memory");
+    expect(html).toContain("original Memory");
+    expect(html).toContain("local only");
+  });
+});

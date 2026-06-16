@@ -28,7 +28,7 @@
       <p class="mt-3 max-w-prose text-zinc-400">
         Write a <span class="glossary-term">Memory</span>. Watch <span class="glossary-term">Dissolving</span> slowly turn it into <span class="glossary-term">Fuzz</span> through <span class="glossary-term">The Waves</span> at different <span class="glossary-term">Fuzz Levels</span>. Keep <span class="glossary-term">Rewriting</span> during the <span class="glossary-term">Endless Fight</span> to leave good <span class="glossary-term">Clues</span> and especially <span class="glossary-term">Fresh Clues</span> at the exact right time for <span class="glossary-term">Perfect Help</span>. At the end the <span class="glossary-term">Smart Robot</span> performs <span class="glossary-term">Reconstructing</span> using its <span class="glossary-term">Training</span> and exactly <span class="glossary-term">4 Cleaning Steps</span>, producing a <span class="glossary-term">Reconstructed Memory</span> that shows a visible <span class="glossary-term">Quiet Rewrite</span> (Creative Guessing, not an <span class="glossary-term">Exact Copy</span>). You feel the <span class="glossary-term">Real Experience</span> and learn the <span class="glossary-term">Feeling Lesson</span>. It all feels like the <span class="glossary-term">Sand Drawing</span>.
       </p>
-      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Issue #7: progressive 4 Cleaning Steps waiting UX during Reconstructing (auto on result, client pauses). References: PRD #1, issues #4/#5/#6/#7, /tmp/handoff-fuzz-issues.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
+      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Issue #7: progressive 4 Cleaning Steps waiting UX during Reconstructing (auto on result, client pauses). Issue #8 complete: side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator + short Feeling Lesson message (local original + result.reconstructed_memory, browser port, dynamic). References: PRD #1, issues #4/#5/#6/#7/#8, /tmp/handoff-fuzz-hf-mcp-wiring-verified.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
     </header>
 
     <!-- View switcher (demo only — shows the four placeholder views) -->
@@ -117,7 +117,7 @@
       <p class="mt-3 text-[10px] text-zinc-500">Stop fight triggers the single <span class="glossary-term">Smart Robot</span> call in the thin helper (issue #6: one call + immediate forget). The 4 Cleaning Steps appear progressively with short pauses (issue #7 client-side, no streaming assumption). Teaches the slow clean-up <span class="glossary-term">Sand Drawing</span> metaphor and the <span class="glossary-term">Feeling Lesson</span>. Uses exact result.steps + reconstructed_memory from coordinator.</p>
     </div>
 
-    <!-- 4. Reveal view -->
+    <!-- 4. Reveal view (issue #8: populated side-by-side using local original Memory + reconstructed_memory from #6 result; Quiet Rewrite highlights via Reveal Comparator (browser port); short Feeling Lesson message) -->
     <div id="view-reveal" class="view border border-zinc-800 rounded-xl p-6 bg-zinc-900">
       <h2 class="font-semibold text-xl mb-2">The <span class="glossary-term">Reconstructed Memory</span> and the <span class="glossary-term">Quiet Rewrite</span></h2>
       <p class="text-sm text-zinc-400 mb-4">Side-by-side comparison. The <span class="glossary-term">live fight box</span> kept your original <span class="glossary-term">Memory</span> locally and uses it only for highlighting the differences (the <span class="glossary-term">Quiet Rewrite</span>). The <span class="glossary-term">thin helper</span> never received the full original.</p>
@@ -125,17 +125,17 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <div class="text-xs uppercase mb-1 text-zinc-400">Your original <span class="glossary-term">Memory</span> (local only)</div>
-          <div class="p-4 bg-black border border-zinc-700 rounded text-sm">The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell.</div>
+          <div id="original-memory-display" class="p-4 bg-black border border-zinc-700 rounded text-sm font-mono whitespace-pre-wrap"></div>
         </div>
         <div>
           <div class="text-xs uppercase mb-1 text-zinc-400"><span class="glossary-term">Reconstructed Memory</span> (Smart Robot Best Guess)</div>
-          <div class="p-4 bg-black border border-emerald-900/60 rounded text-sm">The ancient oak tree by the slow river had stood for centuries. Its roots drank from the gentle stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.</div>
-          <div class="mt-2 text-[10px] text-emerald-400">Highlighted changes (Quiet Rewrite) would appear here in the real reveal. The Smart Robot used Creative Guessing + your Fresh Clues.</div>
+          <div id="reconstructed-memory-display" class="p-4 bg-black border border-emerald-900/60 rounded text-sm font-mono whitespace-pre-wrap"></div>
+          <div class="mt-2 text-[10px] text-emerald-400">Highlighted changes (Quiet Rewrite from Creative Guessing) via Reveal Comparator.</div>
         </div>
       </div>
 
-      <div class="mt-4 p-4 border border-amber-900/40 bg-amber-950/30 rounded text-sm">
-        <span class="font-medium">The Feeling Lesson:</span> The <span class="glossary-term">Smart Robot</span> did not make an <span class="glossary-term">Exact Copy</span>. It used its <span class="glossary-term">Training</span> and the <span class="glossary-term">Fresh Clues</span> you gave it at the exact right <span class="glossary-term">Fuzz Levels</span> during <span class="glossary-term">Rewriting</span> to make a <span class="glossary-term">Best Guess</span> through <span class="glossary-term">Creative Guessing</span>. This is the <span class="glossary-term">Quiet Rewrite</span>. The <span class="glossary-term">Rewriting</span> gave <span class="glossary-term">Perfect Help</span>. You lived the <span class="glossary-term">Real Experience</span> of the <span class="glossary-term">Feeling Science</span> through the <span class="glossary-term">Watch and Fight Way</span>.
+      <div class="mt-4 p-3 border border-amber-900/40 bg-amber-950/30 rounded text-sm">
+        The <span class="glossary-term">Smart Robot</span> used its <span class="glossary-term">Training</span> and your <span class="glossary-term">Fresh Clues</span> for a <span class="glossary-term">Best Guess</span> via <span class="glossary-term">Creative Guessing</span> (<span class="glossary-term">Perfect Help</span>). This <span class="glossary-term">Quiet Rewrite</span> is not an <span class="glossary-term">Exact Copy</span>. You lived the <span class="glossary-term">Real Experience</span> and learned the <span class="glossary-term">Feeling Lesson</span>.
       </div>
 
       <div class="mt-5">
@@ -145,7 +145,7 @@
     </div>
 
     <footer class="mt-10 text-[10px] text-zinc-500">
-      Live fight box (Bun + TypeScript) with deep Fuzz Simulator + playable Endless Fight from issue #4 (client owns Dissolving/The Waves/Fresh Clues timing for Perfect Help; original Memory local only). Thin helper now wires one Smart Robot call + immediate ephemeral forget (#6 complete): stop fight sends contract, receives steps + Reconstructed Memory. See https://github.com/sivaratrisrinivas/fuzz/issues/6 + #4 + parent #1. UX polish (#7-9), resilience (#10) next. Glossary from CONTEXT.md everywhere.
+      Live fight box (Bun + TypeScript) with deep Fuzz Simulator + playable Endless Fight from issue #4 (client owns Dissolving/The Waves/Fresh Clues timing for Perfect Help; original Memory local only). Thin helper now wires one Smart Robot call + immediate ephemeral forget (#6 complete): stop fight sends contract, receives steps + Reconstructed Memory. Issue #7: progressive 4 Cleaning Steps. Issue #8 complete: side-by-side with Quiet Rewrite highlights via Reveal Comparator (deep module + browser port) + short Feeling Lesson (after steps). See https://github.com/sivaratrisrinivas/fuzz/issues/8 + #6 + #4 + parent #1. Glossary from CONTEXT.md everywhere.
     </footer>
   </div>
 
