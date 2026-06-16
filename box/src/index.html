@@ -28,7 +28,7 @@
       <p class="mt-3 max-w-prose text-zinc-400">
         Write a <span class="glossary-term">Memory</span>. Watch <span class="glossary-term">Dissolving</span> slowly turn it into <span class="glossary-term">Fuzz</span> through <span class="glossary-term">The Waves</span> at different <span class="glossary-term">Fuzz Levels</span>. Keep <span class="glossary-term">Rewriting</span> during the <span class="glossary-term">Endless Fight</span> to leave good <span class="glossary-term">Clues</span> and especially <span class="glossary-term">Fresh Clues</span> at the exact right time for <span class="glossary-term">Perfect Help</span>. At the end the <span class="glossary-term">Smart Robot</span> performs <span class="glossary-term">Reconstructing</span> using its <span class="glossary-term">Training</span> and exactly <span class="glossary-term">4 Cleaning Steps</span>, producing a <span class="glossary-term">Reconstructed Memory</span> that shows a visible <span class="glossary-term">Quiet Rewrite</span> (Creative Guessing, not an <span class="glossary-term">Exact Copy</span>). You feel the <span class="glossary-term">Real Experience</span> and learn the <span class="glossary-term">Feeling Lesson</span>. It all feels like the <span class="glossary-term">Sand Drawing</span>.
       </p>
-      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Issue #7: progressive 4 Cleaning Steps waiting UX during Reconstructing (auto on result, client pauses). Issue #8 complete: side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator + short Feeling Lesson message (local original + result.reconstructed_memory, browser port, dynamic). References: PRD #1, issues #4/#5/#6/#7/#8, /tmp/handoff-fuzz-hf-mcp-wiring-verified.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
+      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Issue #7: progressive 4 Cleaning Steps waiting UX during Reconstructing (auto on result, client pauses). Issue #8 complete: side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator + short Feeling Lesson message (local original + result.reconstructed_memory, browser port, dynamic). Issue #9 complete: Play again instant full clear and round reset flows (client-side; refresh during fight handling) — resetAll clears all pieces + empty Memory input; live-fight refresh shows gentle msg + forces fresh start (sessionStorage flag, no private data, glossary only). References: PRD #1, issues #4/#5/#6/#7/#8/#9, /tmp/handoff-fuzz-issue8-complete.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
     </header>
 
     <!-- View switcher (demo only — shows the four placeholder views) -->
@@ -43,6 +43,8 @@
     <div id="view-memory" class="view active border border-zinc-800 rounded-xl p-6 bg-zinc-900">
       <h2 class="font-semibold text-xl mb-2">Enter your <span class="glossary-term">Memory</span></h2>
       <p class="text-sm text-zinc-400 mb-3">This is the private text that will be the subject of the <span class="glossary-term">Sand Drawing</span>. The <span class="glossary-term">live fight box</span> keeps the original <span class="glossary-term">Memory</span> locally only (for accurate <span class="glossary-term">Dissolving</span> simulation and <span class="glossary-term">Fresh Clues</span> timing). The <span class="glossary-term">thin helper</span> and <span class="glossary-term">Smart Robot</span> never see it.</p>
+      <!-- #9: transient gentle notice only shown on boot after refresh-during-live-Endless-Fight (AC4, PRD18). Hidden default; script shows + populates with glossary + forces empty fresh Memory input. Client only, no private data. -->
+      <div id="reset-notice" style="display:none" class="mb-3 p-3 rounded border border-amber-800 bg-amber-950/40 text-sm text-amber-300"></div>
       <textarea class="w-full h-32 p-3 bg-black border border-zinc-700 rounded font-mono text-sm" placeholder="Type your private Memory here... (example: a short story or description you want the Smart Robot to reconstruct from Fuzz)"></textarea>
       <div class="mt-3">
         <button onclick="showView('fight')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-medium">Begin the Endless Fight →</button>
@@ -374,6 +376,8 @@
     function startWaves() {
       if (!currentSim || fightActive) return;
       fightActive = true;
+      // #9: set transient flag (sessionStorage only, bool signal, NEVER stores any Memory/Fuzz/Fresh Clues/private data). Used on reload to detect "refresh during live Endless Fight" for gentle reset + empty start. Cleared on stop/reset/boot.
+      sessionStorage.setItem('fuzzLiveFightRefreshFlag', '1');
       document.getElementById('start-waves-btn').disabled = true;
       document.getElementById('stop-fight-btn').disabled = false;
       const ta = document.getElementById('fight-ta');
@@ -399,6 +403,8 @@
         waveTimer = null;
       }
       fightActive = false;
+      // #9: clear live-fight refresh flag (only "during live" triggers the gentle reset msg on reload; post-stop reloads are normal)
+      sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
       const startBtn = document.getElementById('start-waves-btn');
       const stopBtn = document.getElementById('stop-fight-btn');
       if (startBtn) startBtn.disabled = true;
@@ -511,6 +517,8 @@
       const panel = document.getElementById('end-data-panel');
       if (panel) panel.classList.add('hidden');
       // #9 issue #9: Play again instant full clear — all round pieces (Memory, Fuzz, Fresh Clues, 4 Cleaning Steps, Reconstructed Memory, state) forgotten client-side only. Nothing sent to thin helper. Per ACs + PRD #1 + #8 base.
+      // Also clear any live-fight flag (Play again always gives fresh non-"reset" path)
+      sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
     }
 
     function wireFightControls() {
@@ -543,9 +551,19 @@
     // Boot
     function bootLiveFight() {
       wireFightControls();
-      // Pre-populate memory entry example (the one used for samples)
+      // #9 refresh-during-live-Endless-Fight handling (AC4): check transient flag (set only while waves live). If present: consume+remove (no private data ever kept), force empty Memory input (fresh starting state), show gentle glossary notice. Normal boots still convenience-prefill OAK demo.
+      // This + resetAll clear gives "instant full clear" + "page refresh during fight resets cleanly with gentle msg". Flag cleared on stopWaves/reset too.
       const memTa = document.querySelector('#view-memory textarea');
-      if (memTa && !memTa.value) {
+      const resetNotice = document.getElementById('reset-notice');
+      if (sessionStorage.getItem('fuzzLiveFightRefreshFlag')) {
+        sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
+        if (memTa) memTa.value = '';
+        if (resetNotice) {
+          resetNotice.style.display = 'block';
+          resetNotice.innerHTML = 'The previous round was reset because the page was <span class="glossary-term">refreshed during the Endless Fight</span>. The prior Memory was private on your side only and is now gone. Enter a <span class="glossary-term">completely new Memory</span> to begin again.';
+        }
+      } else if (memTa && !memTa.value) {
+        // normal first-load / non-refresh-during convenience for demo (OAK sample)
         memTa.value = OAK_FOR_DEMO;
       }
       // If someone clicks "Begin the Endless Fight" from entry, switch + init live

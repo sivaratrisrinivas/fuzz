@@ -500,4 +500,44 @@ describe("play again instant full clear and round reset flows (client-side; refr
     expect(html).not.toContain("noise");
     expect(html).not.toContain("scrambled");
   });
+
+  test("Page refresh during live Endless Fight resets to starting empty Memory input state with gentle glossary message (TDD tracer for refresh, priority 3 per approved plan; covers no-data-on-reset as side)", async () => {
+    // RED for refresh resilience (AC4, PRD18): will fail until GREEN adds transient sessionStorage flag (set on live fight start, cleared on stop/reset/boot-consume), #reset-notice div in memory view, boot logic to detect+show gentle msg + force empty ta (override normal prefill) + clear flag. No private data in storage/ever sent.
+    // Observable in public source (html ids, script strings for sessionStorage, flag fns or direct, gentle text using exact terms, reset-notice). Full "during live" vs normal boot distinction.
+    // After GREEN: source proves the behavior; test passes. (Live reload sim via manual later; no data exposure by design.)
+    const htmlFile = Bun.file(new URL("../src/index.html", import.meta.url));
+    const html = await htmlFile.text();
+
+    // Transient flag for "during live Endless Fight" detection (sessionStorage, never stores Memory/Fuzz/Clues/private; only bool signal; cleared fast)
+    expect(html).toContain("sessionStorage");
+    expect(html).toContain("setItem");
+    expect(html).toContain("getItem");
+    expect(html).toContain("removeItem");
+    // flag name or usage hints "fight" + "refresh" or "reset" during Endless Fight
+    expect(html).toContain("fuzzLiveFightRefreshFlag"); // or similar; will use in code
+    expect(html).toContain("Endless Fight");
+
+    // Gentle message UI affordance in starting Memory view (transient, only for refresh-during case)
+    expect(html).toContain("reset-notice");
+    expect(html).toContain("refreshed during the Endless Fight");
+    expect(html).toContain("prior Memory was private");
+    expect(html).toContain("completely new Memory");
+
+    // Boot logic forces empty on this path (starting empty Memory input state per AC)
+    expect(html).toContain("bootLiveFight");
+    expect(html).toContain("memTa");
+    expect(html).toContain("OAK_FOR_DEMO"); // normal prefill still present for other boots
+
+    // Clear flag also on resetAll / stop (so only live during triggers it; normal post-fight reloads don't falsely show "reset")
+    expect(html).toContain("resetAll");
+    expect(html).toContain("stopWaves");
+
+    // Glossary + #9 refs (in new code + existing)
+    expect(html).toContain("issue #9");
+    expect(html).toContain("Memory");
+    expect(html).toContain("Endless Fight");
+
+    // Still no avoided
+    expect(html).not.toContain("noise");
+  });
 });
