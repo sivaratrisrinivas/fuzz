@@ -52,28 +52,8 @@ const server = Bun.serve({
       return Response.json(data, { status: helperResp.status });
     }
 
-    // Serve generated physical assets (Jony Ive-inspired sand, waves, stones, living animations) for the redesigned living UI.
-    // These are non-negotiable visual materials that make the app feel like a tactile organism in a real environment.
-    if (pathname.startsWith('/assets/')) {
-      try {
-        const relativePath = pathname.replace(/^\/assets\//, '');
-        const file = Bun.file(`./assets/${relativePath}`);
-        const exists = await file.exists();
-        if (exists) {
-          const contentType = pathname.endsWith('.mp4') ? 'video/mp4' :
-                             pathname.endsWith('.jpg') || pathname.endsWith('.jpeg') ? 'image/jpeg' :
-                             'application/octet-stream';
-          console.log(`[serve] ${pathname} -> ${contentType}`);
-          return new Response(file, { headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' } });
-        } else {
-          console.log(`[serve] MISSING: ${pathname}`);
-        }
-      } catch (e) {
-        console.log(`[serve] ERROR: ${pathname} - ${e}`);
-      }
-    }
-
-    // Future: static assets or API stubs for the box (client-only for now).
+    // The redesign uses pure CSS + Canvas — no external assets needed.
+    // (Legacy asset handler kept for backward compatibility if assets/ is populated.)
     if (pathname === "/health") {
       return Response.json({
         status: "ok",

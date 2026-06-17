@@ -6,19 +6,32 @@
   <meta name="description" content="Fuzz — feel how AI rebuilds meaning from damaged data. The Feeling Science through the Word Lesson and the Real Experience of the Sand Drawing." />
   <title>Fuzz</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap');
 
     :root {
-      --bg: #050505;
-      --glass: rgba(255,255,255,0.04);
-      --glass-border: rgba(255,255,255,0.08);
-      --glass-hover: rgba(255,255,255,0.07);
-      --text: rgba(255,255,255,0.88);
-      --text-dim: rgba(255,255,255,0.4);
-      --text-ghost: rgba(255,255,255,0.18);
-      --accent: #fff;
-      --radius: 28px;
-      --radius-sm: 16px;
+      --bg: #060608;
+      --bg-secondary: #0a0a10;
+      --surface: rgba(16, 16, 24, 0.65);
+      --surface-border: rgba(255, 255, 255, 0.04);
+      --surface-hover: rgba(24, 24, 36, 0.85);
+      --text: #f5f5f7;
+      --text-dim: #86868b;
+      --text-ghost: #38383d;
+      --junk: #8b6b4a;
+      --accent: #2997ff;
+      --accent-hover: #40bfff;
+      --accent-glow: rgba(41, 151, 255, 0.15);
+      --ocean-surface: rgba(0, 40, 80, 0.15);
+      --ocean-deep: rgba(0, 10, 30, 0.3);
+      --wave-glow: rgba(64, 200, 255, 0.08);
+      --wave-bright: rgba(100, 220, 255, 0.15);
+      --warm: #ff9f43;
+      --radius: 20px;
+      --radius-sm: 12px;
+      --shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+      --shadow-glow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 0 80px rgba(41, 151, 255, 0.04);
+      --transition: 600ms cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-fast: 300ms cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,18 +46,7 @@
       -moz-osx-font-smoothing: grayscale;
     }
 
-    /* === THE LIVING ENVIRONMENT === */
-    @keyframes breathe {
-      0%, 100% { background-position: 0% 50%; opacity: 0.3; }
-      50% { background-position: 100% 50%; opacity: 0.5; }
-    }
-    @keyframes drift {
-      0% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(2%, -1%) scale(1.01); }
-      66% { transform: translate(-1%, 2%) scale(0.99); }
-      100% { transform: translate(0, 0) scale(1); }
-    }
-
+    /* === ATMOSPHERE === */
     #environment {
       position: relative;
       width: 100%;
@@ -53,7 +55,30 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      overflow: hidden;
     }
+
+    /* Atmosphere gradient layers */
+    .atmo {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 1500ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .atmo-deep {
+      background: radial-gradient(ellipse 80% 60% at 50% 100%, rgba(0, 30, 60, 0.4) 0%, transparent 70%);
+      opacity: 0.6;
+    }
+    .atmo-surface {
+      background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 40, 80, 0.2) 0%, transparent 60%);
+      opacity: 0.3;
+    }
+    .atmo-glow {
+      background: radial-gradient(ellipse 40% 30% at 50% 50%, rgba(41, 151, 255, 0.03) 0%, transparent 70%);
+      opacity: 0;
+    }
+    .atmo-glow.active { opacity: 1; }
 
     #organism-canvas {
       position: absolute;
@@ -62,73 +87,7 @@
       pointer-events: none;
     }
 
-    .bg-layer {
-      position: fixed;
-      inset: 0;
-      background-size: cover;
-      background-position: center;
-      opacity: 0;
-      z-index: 0;
-      animation: drift 60s ease-in-out infinite;
-      pointer-events: none;
-      transition: opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .bg-layer.visible { opacity: 0.15; }
-    .bg-layer.bg-cells {
-      background-image: url('/assets/organism-cells.jpg');
-      opacity: 0.06;
-      animation: drift 90s ease-in-out infinite;
-      mix-blend-mode: screen;
-    }
-    .bg-layer.bg-cells.visible { opacity: 0.08; }
-    .bg-layer.bg-depth {
-      background-image: url('/assets/hollow-earth.jpg');
-      opacity: 0;
-      mix-blend-mode: overlay;
-    }
-    .bg-layer.bg-depth.visible { opacity: 0.06; }
-    .bg-layer.bg-organism {
-      background-image: url('/assets/organism-bg.jpg');
-      animation: drift 30s ease-in-out infinite;
-      mix-blend-mode: screen;
-    }
-    .bg-layer.bg-organism.visible { opacity: 0.12; }
-    .bg-layer.bg-undisturbed {
-      background-image: url('/assets/undisturbed-sand.jpg');
-      mix-blend-mode: screen;
-    }
-    .bg-layer.bg-undisturbed.visible { opacity: 0.12; }
-    .bg-layer.bg-wave-sand {
-      background-image: url('/assets/wave-sand.jpg');
-      mix-blend-mode: screen;
-    }
-    .bg-layer.bg-wave-sand.visible { opacity: 0.14; }
-    .bg-layer.bg-settling {
-      background-image: url('/assets/settling-sand.jpg');
-      mix-blend-mode: screen;
-    }
-    .bg-layer.bg-settling.visible { opacity: 0.14; }
-    .bg-layer.bg-stones {
-      background-image: url('/assets/reveal-stones.jpg');
-      mix-blend-mode: screen;
-    }
-    .bg-layer.bg-stones.visible { opacity: 0.14; }
-
-    /* === LIVING WAVE VIDEO === */
-    #wave-video {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      z-index: 0;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 1500ms cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    #wave-video.visible { opacity: 0.18; }
-
-    /* === VIEWS — ONE ACTION PER SCREEN === */
+    /* === VIEWS === */
     .view {
       position: relative;
       display: none;
@@ -137,7 +96,7 @@
       justify-content: center;
       z-index: 2;
       opacity: 0;
-      transform: scale(0.97);
+      transform: scale(0.96) translateY(12px);
       min-height: 100vh;
       padding: 40px 20px;
       transition: opacity 900ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -146,26 +105,25 @@
     .view.active {
       display: flex;
       opacity: 1;
-      transform: scale(1);
+      transform: scale(1) translateY(0);
     }
 
-    /* === TYPOGRAPHY === */
     .view-mark {
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 500;
-      letter-spacing: 0.25em;
+      letter-spacing: 0.35em;
       text-transform: uppercase;
       color: var(--text-ghost);
-      margin-bottom: 40px;
+      margin-bottom: 32px;
       user-select: none;
     }
 
-    /* === GLASS SURFACE === */
     .glass {
-      background: var(--glass);
-      backdrop-filter: blur(60px) saturate(1.2);
-      -webkit-backdrop-filter: blur(60px) saturate(1.2);
-      border: 1px solid var(--glass-border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(80px) saturate(1.4);
+      -webkit-backdrop-filter: blur(80px) saturate(1.4);
+      border: 1px solid var(--surface-border);
       border-radius: var(--radius);
     }
 
@@ -174,58 +132,68 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-top: 40px;
-      padding: 16px 44px;
+      margin-top: 32px;
+      padding: 14px 40px;
       font-family: inherit;
       font-size: 13px;
       font-weight: 400;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.03em;
       color: #000;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255, 255, 255, 0.92);
       border: none;
       border-radius: 999px;
       cursor: pointer;
       user-select: none;
       transition: all 500ms cubic-bezier(0.16, 1, 0.3, 1);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     }
     .action:hover {
       background: #fff;
       transform: translateY(-1px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 60px rgba(255,255,255,0.08);
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 60px rgba(255, 255, 255, 0.05);
     }
-    .action:active { transform: translateY(1px) scale(0.98); }
-    .action:disabled { opacity: 0.15; pointer-events: none; }
+    .action:active { transform: translateY(0px) scale(0.98); }
+    .action:disabled { opacity: 0.12; pointer-events: none; }
     .action.ghost {
       background: transparent;
       color: var(--text-dim);
-      border: 1px solid var(--glass-border);
+      border: 1px solid var(--surface-border);
       box-shadow: none;
-      padding: 12px 28px;
+      padding: 10px 24px;
       font-size: 12px;
     }
-    .action.ghost:hover { background: var(--glass); color: var(--text); }
+    .action.ghost:hover { background: var(--surface-hover); box-shadow: var(--shadow); color: var(--text); }
+    .action.primed {
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 40px rgba(255, 255, 255, 0.04);
+      background: rgba(255, 255, 255, 0.94);
+      transition: all 500ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .action.primed:hover {
+      box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), 0 0 60px rgba(255, 255, 255, 0.08);
+      background: #fff;
+    }
 
-    /* === MEMORY INPUT (view-memory) — write in sand === */
+    /* === MEMORY INPUT === */
     #view-memory textarea {
-      width: min(88vw, 640px);
-      min-height: 200px;
-      padding: 32px;
+      width: min(88vw, 600px);
+      min-height: 180px;
+      padding: 28px 32px;
       font-family: inherit;
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 200;
-      line-height: 1.6;
-      letter-spacing: -0.01em;
+      line-height: 1.7;
+      letter-spacing: -0.005em;
       color: var(--text);
-      background: var(--glass);
-      backdrop-filter: blur(60px);
-      -webkit-backdrop-filter: blur(60px);
-      border: 1px solid var(--glass-border);
+      background: var(--surface);
+      box-shadow: var(--shadow), inset 0 0 60px rgba(41, 151, 255, 0.02);
+      backdrop-filter: blur(80px);
+      -webkit-backdrop-filter: blur(80px);
+      border: 1px solid var(--surface-border);
       border-radius: var(--radius);
       resize: none;
       outline: none;
       caret-color: var(--accent);
-      transition: border-color 400ms, box-shadow 400ms;
+      transition: border-color 600ms, box-shadow 600ms;
       text-align: left;
     }
     #view-memory textarea::placeholder {
@@ -233,34 +201,86 @@
       font-weight: 300;
     }
     #view-memory textarea:focus {
-      border-color: rgba(255,220,180,0.25);
-      box-shadow: 0 0 40px rgba(255,220,180,0.06), inset 0 0 40px rgba(255,220,180,0.03);
+      border-color: rgba(41, 151, 255, 0.2);
+      box-shadow: var(--shadow), 0 0 60px rgba(41, 151, 255, 0.04), inset 0 0 60px rgba(41, 151, 255, 0.02);
     }
-    /* Sand-drawing glow on each keystroke */
     #view-memory textarea.glow {
-      border-color: rgba(255,220,180,0.15);
-      box-shadow: 0 0 30px rgba(255,220,180,0.04);
+      border-color: rgba(41, 151, 255, 0.1);
+      box-shadow: var(--shadow), 0 0 40px rgba(41, 151, 255, 0.03);
     }
 
     #reset-notice {
       display: none;
-      max-width: 440px;
-      padding: 14px 20px;
+      max-width: 420px;
+      padding: 12px 20px;
       margin-bottom: 20px;
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.5;
       color: var(--text-dim);
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--surface-border);
       border-radius: var(--radius-sm);
       text-align: center;
     }
 
+    /* === MODE SELECTOR === */
+    .mode-selector {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .mode-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 16px 28px;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: all 400ms cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+    .mode-option:hover {
+      border-color: rgba(255, 255, 255, 0.08);
+      background: var(--surface-hover);
+    }
+    .mode-option.active {
+      border-color: rgba(41, 151, 255, 0.2);
+      box-shadow: 0 0 40px rgba(41, 151, 255, 0.04);
+    }
+    .mode-option input { display: none; }
+    .mode-option span:first-of-type {
+      font-size: 15px;
+      font-weight: 400;
+      color: var(--text);
+    }
+    .mode-desc {
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--text-ghost);
+    }
+
+    #timer-display {
+      margin-top: 16px;
+      font-size: 28px;
+      font-weight: 200;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+      text-align: center;
+      user-select: none;
+    }
+    #timer-display.warning {
+      color: rgba(255, 180, 80, 0.7);
+    }
+
     /* === FIGHT VIEW === */
     #view-fight .fight-surface {
-      width: min(92vw, 720px);
-      min-height: 280px;
-      padding: 36px;
+      width: min(92vw, 680px);
+      min-height: 200px;
+      padding: 28px;
       position: relative;
       overflow: hidden;
       transition: transform 80ms;
@@ -270,35 +290,11 @@
     }
     @keyframes surfaceShake {
       0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-3px); }
-      75% { transform: translateX(3px); }
+      25% { transform: translateX(-2px); }
+      75% { transform: translateX(2px); }
     }
-    #fight-display {
-      font-family: inherit;
-      font-size: 19px;
-      font-weight: 200;
-      line-height: 1.65;
-      color: var(--text);
-      white-space: pre-wrap;
-      word-break: break-word;
-      min-height: 180px;
-      position: relative;
-      z-index: 1;
-    }
-    #fight-display .fuzzed {
-      color: var(--text-ghost);
-      transition: color 400ms;
-      position: relative;
-    }
-    #fight-display .fuzzed.dissolving {
-      animation: charDissolve 700ms ease-out forwards;
-    }
-    @keyframes charDissolve {
-      0% { color: rgba(255,255,255,0.9); text-shadow: 0 0 8px rgba(255,255,255,0.6); }
-      30% { color: rgba(255,200,150,0.7); text-shadow: 0 0 16px rgba(255,200,150,0.4); }
-      100% { color: var(--text-ghost); text-shadow: none; }
-    }
-    /* Wave sweep overlay */
+
+    /* Wave sweep — the water coming in */
     .wave-sweep {
       position: absolute;
       inset: 0;
@@ -306,111 +302,276 @@
       pointer-events: none;
       opacity: 0;
       background: linear-gradient(
-        to right,
+        90deg,
         transparent 0%,
-        rgba(255,255,255,0.03) 20%,
-        rgba(255,255,255,0.08) 40%,
-        rgba(180,210,255,0.05) 50%,
-        rgba(255,255,255,0.08) 60%,
-        rgba(255,255,255,0.03) 80%,
+        transparent 15%,
+        rgba(64, 200, 255, 0.04) 25%,
+        rgba(100, 220, 255, 0.10) 35%,
+        rgba(150, 235, 255, 0.06) 42%,
+        rgba(64, 200, 255, 0.04) 50%,
+        transparent 60%,
         transparent 100%
       );
-      transition: opacity 100ms;
+      border-radius: var(--radius);
+      transition: opacity 60ms;
     }
     .wave-sweep.active {
       opacity: 1;
       animation: waveSweep 500ms ease-out forwards;
     }
+    .wave-sweep.final {
+      opacity: 1;
+      animation: waveSweep 1400ms ease-out forwards;
+    }
     @keyframes waveSweep {
       0% { transform: translateX(-100%); opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
+      8% { opacity: 1; }
+      85% { opacity: 0.8; }
       100% { transform: translateX(100%); opacity: 0; }
     }
-    /* Foam bubbles on wave hit */
+
+    /* Deep wave layer — secondary sweep for depth */
+    .wave-sweep-deep {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        transparent 30%,
+        rgba(41, 151, 255, 0.03) 45%,
+        rgba(41, 151, 255, 0.06) 50%,
+        rgba(41, 151, 255, 0.03) 55%,
+        transparent 70%,
+        transparent 100%
+      );
+      border-radius: var(--radius);
+      transition: opacity 40ms;
+    }
+    .wave-sweep-deep.active {
+      opacity: 1;
+      animation: waveSweepDeep 700ms ease-out forwards;
+    }
+    @keyframes waveSweepDeep {
+      0% { transform: translateX(-100%); opacity: 0; }
+      15% { opacity: 0.6; }
+      100% { transform: translateX(100%); opacity: 0; }
+    }
+
+    #fight-display {
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 200;
+      line-height: 1.7;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 140px;
+      position: relative;
+      z-index: 1;
+    }
+    #fight-display .junk {
+      color: var(--junk);
+    }
+    #fight-display .char-clean {
+      color: var(--text);
+    }
+    #fight-display .char-clean.glow {
+      animation: charGlow 500ms ease-out;
+    }
+    @keyframes charGlow {
+      0% { color: #6ee7b7; text-shadow: 0 0 6px rgba(110, 231, 183, 0.5); }
+      100% { color: var(--text); text-shadow: none; }
+    }
+
+    /* Foam particles */
     .foam-particle {
       position: absolute;
-      width: 4px;
-      height: 4px;
-      background: rgba(255,255,255,0.3);
+      width: 3px;
+      height: 3px;
+      background: rgba(100, 220, 255, 0.25);
       border-radius: 50%;
       pointer-events: none;
       z-index: 3;
-      animation: foamRise 800ms ease-out forwards;
+      animation: foamRise 900ms ease-out forwards;
     }
     @keyframes foamRise {
-      0% { opacity: 0.6; transform: translate(0, 0) scale(1); }
-      100% { opacity: 0; transform: translate(var(--foam-dx), var(--foam-dy)) scale(0); }
+      0% { opacity: 0.5; transform: translate(0, 0) scale(1); box-shadow: 0 0 4px rgba(100, 220, 255, 0.2); }
+      100% { opacity: 0; transform: translate(var(--foam-dx), var(--foam-dy)) scale(0); box-shadow: none; }
     }
+
     #fight-input {
-      position: absolute;
-      inset: 36px;
-      width: calc(100% - 72px);
-      height: calc(100% - 72px);
+      display: block;
       font-family: inherit;
-      font-size: 19px;
+      font-size: 15px;
       font-weight: 200;
-      line-height: 1.65;
+      line-height: 1.7;
       color: var(--text);
-      background: transparent;
-      border: none;
-      resize: none;
-      outline: none;
       caret-color: var(--accent);
-      z-index: 2;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      outline: none;
+      resize: none;
+      white-space: pre-wrap;
+      word-break: break-word;
+      width: 100%;
+      min-height: 140px;
+      padding: 16px;
+      box-sizing: border-box;
+      margin-top: 12px;
     }
-    .wave-line {
-      width: min(80vw, 600px);
-      height: 3px;
-      background: var(--glass-border);
-      border-radius: 2px;
+    #fight-input:focus {
+      border-color: var(--accent);
+    }
+    #fight-input.awaiting {
+      border-color: rgba(41, 151, 255, 0.15);
+      box-shadow: 0 0 40px rgba(41, 151, 255, 0.06);
+      animation: inputAwait 2s ease-in-out infinite;
+    }
+    @keyframes inputAwait {
+      0%, 100% { border-color: rgba(41, 151, 255, 0.15); box-shadow: 0 0 40px rgba(41, 151, 255, 0.03); }
+      50% { border-color: rgba(41, 151, 255, 0.25); box-shadow: 0 0 60px rgba(41, 151, 255, 0.08); }
+    }
+
+    .rewrite-label {
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-ghost);
       margin-top: 20px;
+      margin-bottom: 0;
+    }
+
+    /* === FUZZ LEVEL === */
+    .fuzz-level-container {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-top: 20px;
+      width: min(80vw, 600px);
+    }
+    .fuzz-ring {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+    }
+    .fuzz-ring svg {
+      transform: rotate(-90deg);
+      width: 44px;
+      height: 44px;
+    }
+    .fuzz-ring-bg {
+      fill: none;
+      stroke: rgba(255,255,255,0.04);
+      stroke-width: 2.5;
+    }
+    .fuzz-ring-fill {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 500ms cubic-bezier(0.16, 1, 0.3, 1);
+      filter: drop-shadow(0 0 4px rgba(41,151,255,0.3));
+    }
+    .fuzz-level-number {
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: var(--text);
+      min-width: 80px;
+      transition: color 200ms;
+    }
+    .fuzz-level-number.pulse {
+      color: var(--accent);
+    }
+
+    .fresh-clue-dots {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .fresh-clue-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px rgba(41, 151, 255, 0.5);
+      animation: cluePop 400ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes cluePop {
+      0% { transform: scale(0); opacity: 0; }
+      60% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.7; }
+    }
+
+    .wave-line {
+      flex: 1;
+      height: 2px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 1px;
       position: relative;
       overflow: hidden;
-      transition: box-shadow 300ms;
     }
     .wave-line .wave-line-fill {
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 0%;
-      background: linear-gradient(to right, rgba(255,255,255,0.2), rgba(200,220,255,0.6));
-      border-radius: 2px;
-      transition: width 400ms ease;
+      background: linear-gradient(to right, transparent, var(--accent));
+      border-radius: 1px;
+      transition: width 500ms cubic-bezier(0.16, 1, 0.3, 1);
+      opacity: 0.6;
     }
     .wave-line.pulse {
-      box-shadow: 0 0 20px rgba(200,220,255,0.3), 0 0 60px rgba(200,220,255,0.1);
-      transition: box-shadow 80ms;
+      box-shadow: 0 0 12px rgba(41,151,255,0.15);
+      transition: box-shadow 60ms;
     }
+    .waves-paused .wave-line-fill {
+      opacity: 0.15;
+      transition: opacity 300ms;
+    }
+    .waves-paused .fuzz-ring-fill {
+      opacity: 0.25;
+      transition: opacity 300ms;
+    }
+    .waves-paused .fuzz-level-number {
+      opacity: 0.35;
+      transition: opacity 300ms;
+    }
+
     .fight-controls {
       display: flex;
       align-items: center;
-      gap: 16px;
-      margin-top: 24px;
+      gap: 12px;
+      margin-top: 20px;
     }
     #fuzz-level-display {
       font-size: 11px;
       letter-spacing: 0.15em;
       color: var(--text-ghost);
-      font-weight: 400;
-      transition: color 300ms;
-    }
-    #fuzz-level-display.pulse {
-      color: rgba(200,220,255,0.6);
+      font-weight: 500;
+      margin-top: 8px;
     }
 
     /* === RECONSTRUCTING VIEW === */
     #progressive-steps {
-      width: min(84vw, 560px);
+      width: min(84vw, 520px);
     }
     .cleaning-step {
-      padding: 24px 28px;
-      margin-bottom: 16px;
+      padding: 20px 24px;
+      margin-bottom: 12px;
       border-radius: var(--radius-sm);
-      background: var(--glass);
+      background: var(--surface);
+      box-shadow: var(--shadow);
       backdrop-filter: blur(40px);
-      border: 1px solid var(--glass-border);
+      border: 1px solid var(--surface-border);
       opacity: 0;
-      transform: translateY(16px);
+      transform: translateY(12px);
       transition: all 700ms cubic-bezier(0.16, 1, 0.3, 1);
       position: relative;
       overflow: hidden;
@@ -419,11 +580,11 @@
       opacity: 1;
       transform: translateY(0);
     }
-    .cleaning-step.opacity-60 { opacity: 0.25; }
+    .cleaning-step.opacity-60 { opacity: 0.2; }
     .cleaning-step .step-settle {
       position: absolute;
       inset: 0;
-      background: radial-gradient(ellipse at center, rgba(200,220,240,0.06) 0%, transparent 70%);
+      background: radial-gradient(ellipse at center, rgba(41,151,255,0.04) 0%, transparent 70%);
       opacity: 0;
       transition: opacity 1000ms;
       pointer-events: none;
@@ -432,30 +593,37 @@
       animation: settleGlow 1200ms ease-out forwards;
     }
     @keyframes settleGlow {
-      0% { opacity: 0.6; transform: scale(0.8); }
+      0% { opacity: 0.5; transform: scale(0.8); }
       100% { opacity: 0; transform: scale(1.5); }
     }
     .cleaning-step .step-label {
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 500;
       letter-spacing: 0.2em;
       color: var(--text-ghost);
-      margin-bottom: 10px;
+      margin-bottom: 2px;
       text-transform: uppercase;
     }
+    .cleaning-step .step-subtitle {
+      font-size: 11px;
+      font-weight: 300;
+      color: var(--text-ghost);
+      margin-bottom: 10px;
+      font-style: italic;
+    }
     .cleaning-step .step-content {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 200;
       line-height: 1.6;
       color: var(--text);
     }
     #reconstruct-status {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-ghost);
-      letter-spacing: 0.1em;
-      margin-top: 20px;
+      letter-spacing: 0.08em;
+      margin-top: 16px;
       text-align: center;
-      min-height: 20px;
+      min-height: 18px;
     }
 
     /* === RESILIENCE PANEL === */
@@ -463,24 +631,25 @@
       display: none;
       flex-direction: column;
       align-items: center;
-      gap: 12px;
-      margin-top: 24px;
-      padding: 24px;
-      background: var(--glass);
-      border: 1px solid var(--glass-border);
+      gap: 10px;
+      margin-top: 20px;
+      padding: 20px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--surface-border);
       border-radius: var(--radius-sm);
-      max-width: 400px;
+      max-width: 380px;
       text-align: center;
     }
     #resilience-panel .resilience-msg {
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.6;
       color: var(--text-dim);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     #resilience-panel .resilience-actions {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       flex-wrap: wrap;
       justify-content: center;
     }
@@ -489,80 +658,109 @@
     .reveal-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 24px;
-      width: min(92vw, 960px);
+      gap: 20px;
+      width: min(92vw, 880px);
     }
     @media (max-width: 700px) {
       .reveal-grid { grid-template-columns: 1fr; }
     }
     .reveal-column { text-align: center; }
     .reveal-label {
-      font-size: 10px;
+      font-size: 9px;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--text-ghost);
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       font-weight: 500;
     }
     .reveal-card {
-      padding: 32px;
-      min-height: 200px;
-      font-size: 16px;
+      padding: 28px;
+      min-height: 180px;
+      font-size: 15px;
       font-weight: 200;
       line-height: 1.65;
       text-align: left;
       transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
     }
+    .reveal-card.delayed {
+      opacity: 0;
+      transform: translateY(8px);
+      animation: revealFadeIn 800ms cubic-bezier(0.16, 1, 0.3, 1) 400ms forwards;
+    }
+    @keyframes revealFadeIn {
+      0% { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
     #feeling-lesson-msg {
-      max-width: 500px;
-      margin: 36px auto 0;
-      font-size: 13px;
+      max-width: 480px;
+      margin: 28px auto 0;
+      font-size: 12px;
       font-weight: 300;
       line-height: 1.7;
       color: var(--text-dim);
       text-align: center;
     }
     .quiet-rewrite {
-      color: #fff;
+      color: var(--accent);
       font-weight: 400;
-      text-shadow: 0 0 20px rgba(255,255,255,0.3);
       position: relative;
+      background: none;
+      border: none;
+      padding: 0;
       animation: quietGlow 3s ease-in-out infinite;
     }
     @keyframes quietGlow {
-      0%, 100% { text-shadow: 0 0 10px rgba(255,255,255,0.2); }
-      50% { text-shadow: 0 0 30px rgba(255,255,255,0.4), 0 0 60px rgba(255,255,255,0.1); }
-    }
-    .reveal-card {
-      transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 500ms;
-    }
-    .reveal-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+      0%, 100% { text-shadow: 0 0 6px rgba(41,151,255,0.15); }
+      50% { text-shadow: 0 0 16px rgba(41,151,255,0.25), 0 0 32px rgba(41,151,255,0.08); }
     }
 
     #end-data-panel { display: none; }
+
+    /* === AUDIO TOGGLE === */
+    #audio-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 100;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      cursor: pointer;
+      opacity: 0.4;
+      transition: opacity 400ms, background 400ms;
+      color: var(--text-dim);
+    }
+    #audio-toggle:hover {
+      opacity: 0.8;
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+    #audio-toggle.muted {
+      opacity: 0.3;
+    }
+    #audio-toggle svg {
+      width: 14px;
+      height: 14px;
+    }
 
     /* === TRANSITION OVERLAY === */
     #transition-overlay {
       position: absolute;
       inset: 0;
       z-index: 50;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(30px);
-      -webkit-backdrop-filter: blur(30px);
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
       pointer-events: none;
       opacity: 0;
-      transition: opacity 1000ms cubic-bezier(0.16, 1, 0.3, 1);
+      transition: opacity 700ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     #transition-overlay.active { opacity: 1; }
-
-    /* === BREATHING PULSE ON ACTIVE BUTTON === */
-    @keyframes subtle-pulse {
-      0%, 100% { box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-      50% { box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 40px rgba(255,255,255,0.06); }
-    }
-    .action:not(:disabled) { animation: subtle-pulse 4s ease-in-out infinite; }
   </style>
 </head>
 <body>
@@ -580,46 +778,73 @@
        Data contract: fight-end data contract {final_fuzz, fresh_clues} only. -->
 
   <div id="environment">
-    <div class="bg-layer bg-cells visible"></div>
-    <div class="bg-layer bg-depth visible"></div>
-    <div class="bg-layer bg-organism visible" id="bg-primary"></div>
-    <div class="bg-layer bg-undisturbed" id="bg-memory"></div>
-    <div class="bg-layer bg-wave-sand" id="bg-fight"></div>
-    <div class="bg-layer bg-settling" id="bg-reconstructing"></div>
-    <div class="bg-layer bg-stones" id="bg-reveal"></div>
-    <video id="wave-video" src="/assets/wave-living.mp4" muted loop playsinline preload="auto"></video>
+    <button id="audio-toggle" title="Toggle sound" aria-label="Toggle sound">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+        <path class="sound-waves" d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
+      </svg>
+    </button>
+    <div class="atmo atmo-surface"></div>
+    <div class="atmo atmo-glow" id="atmo-glow"></div>
+
     <canvas id="organism-canvas"></canvas>
 
-    <!-- ====== VIEW 1: MEMORY ENTRY — One action: Begin ====== -->
+    <!-- ====== VIEW 1: MEMORY ENTRY ====== -->
     <div id="view-memory" class="view active">
       <div id="reset-notice">
         You refreshed during the Endless Fight. Your prior Memory was private and is gone.
         Type a completely new Memory below.
       </div>
       <div class="view-mark">fuzz</div>
-      <textarea placeholder="Write a Memory…"></textarea>
-      <button class="action" id="begin-btn">Begin the Endless Fight</button>
+      <textarea placeholder="Write something that matters to you…"></textarea>
+      <div class="mode-selector">
+        <label class="mode-option active">
+          <input type="radio" name="fight-mode" value="freeform" checked>
+          <span>Freeform</span>
+          <span class="mode-desc">Fight at your own pace</span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="fight-mode" value="timed">
+          <span>Timed</span>
+          <span class="mode-desc">60-second round</span>
+        </label>
+      </div>
+      <button class="action" id="begin-btn">Begin</button>
     </div>
 
-    <!-- ====== VIEW 2: THE ENDLESS FIGHT — One action: Release ====== -->
+    <!-- ====== VIEW 2: THE ENDLESS FIGHT ====== -->
     <div id="view-fight" class="view">
       <div class="view-mark">the waves</div>
       <div class="fight-surface glass" id="fight-surface">
         <div class="wave-sweep" id="wave-sweep"></div>
+        <div class="wave-sweep-deep" id="wave-sweep-deep"></div>
         <div id="foam-container"></div>
         <div id="fight-display"></div>
-        <textarea id="fight-input"></textarea>
       </div>
-      <div class="wave-line" id="wave-line">
-        <div class="wave-line-fill" id="wave-line-fill"></div>
+      <div class="rewrite-label">Rewrite the Memory</div>
+      <textarea id="fight-input" placeholder="Type over the fuzzed text…"></textarea>
+      <div class="fuzz-level-container">
+        <div class="fuzz-ring">
+          <svg viewBox="0 0 44 44">
+            <circle class="fuzz-ring-bg" cx="22" cy="22" r="18" />
+            <circle class="fuzz-ring-fill" id="fuzz-ring-fill" cx="22" cy="22" r="18"
+              stroke-dasharray="113.1" stroke-dashoffset="113.1" />
+          </svg>
+        </div>
+        <div class="fuzz-level-number" id="fuzz-level-number">FUZZ 0</div>
+        <div class="fresh-clue-dots" id="fresh-clue-dots"></div>
+        <div class="wave-line" id="wave-line">
+          <div class="wave-line-fill" id="wave-line-fill"></div>
+        </div>
       </div>
       <div id="fuzz-level-display"></div>
+      <div id="timer-display"></div>
       <div class="fight-controls">
         <button class="action" id="release-btn" disabled>Release</button>
       </div>
     </div>
 
-    <!-- ====== VIEW 3: RECONSTRUCTING — No action (witness); then Continue ======
+    <!-- ====== VIEW 3: RECONSTRUCTING ======
          The Smart Robot has started Reconstructing using its 4 Cleaning Steps
          Cleaning Steps on the Fuzz using Training + Creative Guessing.
          Progressive step-by-step reveal with short pauses for the Sand Drawing metaphor.
@@ -631,21 +856,25 @@
         <div id="step-1" class="cleaning-step opacity-60">
           <div class="step-settle"></div>
           <div class="step-label">Cleaning Step 1</div>
+          <div class="step-subtitle">Putting back the clearest words and short phrases first</div>
           <div class="step-content"></div>
         </div>
         <div id="step-2" class="cleaning-step opacity-60">
           <div class="step-settle"></div>
           <div class="step-label">Cleaning Step 2</div>
+          <div class="step-subtitle">Filling in more letters and words around the ones already fixed</div>
           <div class="step-content"></div>
         </div>
         <div id="step-3" class="cleaning-step opacity-60">
           <div class="step-settle"></div>
           <div class="step-label">Cleaning Step 3</div>
+          <div class="step-subtitle">Using Training to guess the rest — small changes where it feels right</div>
           <div class="step-content"></div>
         </div>
         <div id="step-4" class="cleaning-step opacity-60">
           <div class="step-settle"></div>
-          <div class="step-label">Cleaning Step 4</div>
+          <div class="step-label">Cleaning Step 4 — The Reconstructed Memory</div>
+          <div class="step-subtitle">One last quiet pass — the Quiet Rewrite is not an Exact Copy</div>
           <div class="step-content"></div>
         </div>
       </div>
@@ -670,7 +899,7 @@
       <button class="action" id="continue-btn" style="display:none">See the Reconstructed Memory</button>
     </div>
 
-    <!-- ====== VIEW 4: REVEAL — One action: Again ======
+    <!-- ====== VIEW 4: REVEAL ======
          Side-by-side via Reveal Comparator. Quiet Rewrite highlights. Short Feeling Lesson.
          The Smart Robot used its Training and the Fresh Clues for a Best Guess via Creative Guessing.
          The Quiet Rewrite is not an Exact Copy. You lived the Real Experience.
@@ -725,12 +954,10 @@
       function getCurrentFuzzLevel() { return level; }
 
       function applyWaveToPositions(indices) {
-        let mutated = false;
         const chars = current.split('');
         for (const i of indices) {
           if (i >= 0 && i < chars.length && chars[i] === original[i]) {
             chars[i] = '*';
-            mutated = true;
           }
         }
         current = chars.join('');
@@ -738,25 +965,31 @@
       }
 
       function applyWave() {
+        const unfuzzed = [];
         for (let i = 0; i < current.length; i++) {
-          if (current[i] === original[i]) {
-            applyWaveToPositions([i]);
-            return;
-          }
+          if (current[i] === original[i]) unfuzzed.push(i);
         }
+        if (unfuzzed.length === 0) return false;
+        const pick = unfuzzed[Math.floor(Math.random() * unfuzzed.length)];
+        applyWaveToPositions([pick]);
+        return true;
       }
 
       function feedRewrite(edited) {
         const before = current;
+        const beforeChars = before.split('');
         const proposed = (edited || '').padEnd(original.length, '*').slice(0, original.length);
         const chars = current.split('');
+        const cleaned = new Set();
         for (let i = 0; i < original.length; i++) {
-          if (proposed[i] === original[i]) {
+          if (proposed[i] === original[i] && chars[i] !== original[i]) {
             chars[i] = original[i];
+            cleaned.add(i);
           }
         }
         current = chars.join('');
         captureFreshCluesIfNewlyClean(before, level);
+        return cleaned;
       }
 
       function captureFreshCluesIfNewlyClean(before, atLevel) {
@@ -812,7 +1045,7 @@
       function toHighlightedHtml(segments) {
         return segments.map(seg => {
           if (seg.isQuietRewriteChange) {
-            return '<span class="quiet-rewrite">' + seg.text + '</span>';
+            return '<mark class="quiet-rewrite">' + seg.text + '</mark>';
           }
           return seg.text;
         }).join('');
@@ -825,6 +1058,7 @@
     let orgCtx = null;
     let orgCanvas = null;
     let orgPhase = 'calm'; // calm | active | settle | reveal
+    let orgWarmTimer = null;
 
     function initOrganism() {
       orgCanvas = document.getElementById('organism-canvas');
@@ -832,7 +1066,7 @@
       orgCtx = orgCanvas.getContext('2d', { alpha: true });
       resizeOrganism();
       window.addEventListener('resize', resizeOrganism);
-      for (let i = 0; i < 50; i++) spawnParticle();
+      for (let i = 0; i < 60; i++) spawnParticle();
       requestAnimationFrame(tickOrganism);
     }
 
@@ -846,13 +1080,18 @@
       particles.push({
         x: Math.random() * (orgCanvas ? orgCanvas.width : 1000),
         y: Math.random() * (orgCanvas ? orgCanvas.height : 800),
-        vx: (Math.random() - 0.5) * 0.15,
-        vy: (Math.random() - 0.5) * 0.12,
-        size: 0.5 + Math.random() * 1.5,
-        alpha: 0.05 + Math.random() * 0.15,
+        vx: (Math.random() - 0.5) * 0.12,
+        vy: (Math.random() - 0.5) * 0.1,
+        size: 0.4 + Math.random() * 1.2,
+        alpha: 0.04 + Math.random() * 0.12,
         pulse: Math.random() * Math.PI * 2,
-        pulseSpeed: 0.005 + Math.random() * 0.01
+        pulseSpeed: 0.004 + Math.random() * 0.008
       });
+    }
+
+    function warmOrganism(duration) {
+      if (orgWarmTimer) clearTimeout(orgWarmTimer);
+      orgWarmTimer = setTimeout(() => { orgWarmTimer = null; }, duration);
     }
 
     function tickOrganism() {
@@ -861,8 +1100,9 @@
       orgCtx.clearRect(0, 0, w, h);
 
       const speedMul = orgPhase === 'active' ? 2.5 : orgPhase === 'settle' ? 0.5 : 1;
-      const alphaMul = orgPhase === 'reveal' ? 1.6 : orgPhase === 'active' ? 1.3 : 1;
-      const hue = orgPhase === 'active' ? '200, 230, 255' : '180, 220, 240';
+      const alphaMul = orgPhase === 'reveal' ? 1.4 : orgPhase === 'active' ? 1.2 : 1;
+      const isWarm = orgWarmTimer !== null;
+      const hue = isWarm ? '255, 200, 120' : (orgPhase === 'active' ? '60, 200, 255' : '40, 180, 255');
 
       for (const p of particles) {
         p.x += p.vx * speedMul;
@@ -882,24 +1122,292 @@
         orgCtx.fillStyle = `rgba(${hue}, ${Math.min(1, a)})`;
         orgCtx.fill();
 
-        if (p.size > 1 && a > 0.08) {
+        if (p.size > 1 && a > 0.06) {
           orgCtx.beginPath();
           orgCtx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
-          orgCtx.fillStyle = `rgba(${hue}, ${a * 0.15})`;
+          orgCtx.fillStyle = `rgba(${hue}, ${a * 0.12})`;
           orgCtx.fill();
         }
       }
       requestAnimationFrame(tickOrganism);
     }
 
+    // --- Procedural Ocean Sound Manager (Web Audio API) ---
+    // Filtered random signal through lowpass filter with LFO-modulated swell.
+    // Intensity maps to Fuzz Level: subtle hum at low, roaring surf at high.
+    function createSoundManager() {
+      let ctx = null;
+      let source = null;
+      let filter = null;
+      let volume = null;
+      let lfo = null;
+      let lfoDepth = null;
+      let isPlaying = false;
+      let currentIntensity = 0;
+
+      function ensureCtx() {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === 'suspended') ctx.resume();
+        return ctx;
+      }
+
+      function pinkNoiseBuffer(c, dur) {
+        const len = c.sampleRate * dur;
+        const buf = c.createBuffer(1, len, c.sampleRate);
+        const d = buf.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+        for (let i = 0; i < len; i++) {
+          const w = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + w * 0.0555179;
+          b1 = 0.99332 * b1 + w * 0.0750759;
+          b2 = 0.96900 * b2 + w * 0.1538520;
+          b3 = 0.86650 * b3 + w * 0.3104856;
+          b4 = 0.55000 * b4 + w * 0.5329522;
+          b5 = -0.7616 * b5 - w * 0.0168980;
+          d[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362) * 0.11;
+          b6 = w * 0.115926;
+        }
+        return buf;
+      }
+
+      function start() {
+        const c = ensureCtx();
+        if (isPlaying) return;
+
+        const buf = pinkNoiseBuffer(c, 5);
+        source = c.createBufferSource();
+        source.buffer = buf;
+        source.loop = true;
+
+        filter = c.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 80;
+
+        volume = c.createGain();
+        volume.gain.value = 0;
+
+        lfo = c.createOscillator();
+        lfo.type = 'sine';
+        lfo.frequency.value = 0.18;
+
+        lfoDepth = c.createGain();
+        lfoDepth.gain.value = 0.04;
+
+        lfo.connect(lfoDepth);
+        lfoDepth.connect(volume.gain);
+
+        source.connect(filter);
+        filter.connect(volume);
+        volume.connect(c.destination);
+
+        source.start();
+        lfo.start();
+        isPlaying = true;
+        applyIntensity(currentIntensity);
+      }
+
+      function applyIntensity(val) {
+        currentIntensity = val;
+        if (!isPlaying || !filter || !volume) return;
+        const t = (ctx || ensureCtx()).currentTime;
+        const cutoff = 60 + val * val * 500;
+        filter.frequency.setTargetAtTime(cutoff, t, 0.4);
+        if (!muted) {
+          const baseVol = 0.04 + val * 0.18;
+          volume.gain.setTargetAtTime(baseVol, t, 0.4);
+          const depth = 0.02 + val * 0.08;
+          lfoDepth.gain.setTargetAtTime(depth, t, 0.4);
+        }
+      }
+
+      function setIntensity(level, maxLevel) {
+        applyIntensity(Math.min(1, level / Math.max(1, maxLevel)));
+      }
+
+      function oneShotNoise(c, dur, bandFreq, bandQ) {
+        const len = c.sampleRate * dur;
+        const buf = c.createBuffer(1, len, c.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        const src = c.createBufferSource();
+        src.buffer = buf;
+        const bp = c.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = bandFreq;
+        bp.Q.value = bandQ;
+        const g = c.createGain();
+        g.gain.value = 0;
+        src.connect(bp);
+        bp.connect(g);
+        g.connect(c.destination);
+        const t = c.currentTime;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.3, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        src.start(t);
+        src.stop(t + dur + 0.05);
+        setTimeout(() => { try { src.disconnect(); bp.disconnect(); g.disconnect(); } catch (e) {} }, (dur + 0.1) * 1000);
+      }
+
+      function playWaveHit() {
+        const c = ensureCtx();
+        oneShotNoise(c, 0.25, 1800, 1.5);
+        oneShotNoise(c, 0.4, 400, 0.8);
+      }
+
+      function playTick() {
+        const c = ensureCtx();
+        const osc = c.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = 1200;
+        const g = c.createGain();
+        g.gain.value = 0;
+        osc.connect(g);
+        g.connect(c.destination);
+        const t = c.currentTime;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.08, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+        osc.start(t);
+        osc.stop(t + 0.08);
+        setTimeout(() => { try { osc.disconnect(); g.disconnect(); } catch (e) {} }, 200);
+      }
+
+      let tensionOsc = null;
+      let tensionGain = null;
+
+      function playReleaseSwell() {
+        const c = ensureCtx();
+        const len = c.sampleRate * 2;
+        const buf = c.createBuffer(1, len, c.sampleRate);
+        const d = buf.getChannelData(0);
+        let b0 = 0, b1 = 0, b2 = 0;
+        for (let i = 0; i < len; i++) {
+          const w = Math.random() * 2 - 1;
+          b0 = 0.99886 * b0 + w * 0.0555179;
+          b1 = 0.99332 * b1 + w * 0.0750759;
+          b2 = 0.96900 * b2 + w * 0.1538520;
+          d[i] = (b0 + b1 + b2) * 0.2;
+        }
+        const src = c.createBufferSource();
+        src.buffer = buf;
+        const lp = c.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 180;
+        const g = c.createGain();
+        const t = c.currentTime;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.3, t + 0.6);
+        g.gain.linearRampToValueAtTime(0.15, t + 1.0);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+        src.connect(lp);
+        lp.connect(g);
+        g.connect(c.destination);
+        src.start(t);
+        src.stop(t + 3);
+        setTimeout(() => { try { src.disconnect(); lp.disconnect(); g.disconnect(); } catch (e) {} }, 3200);
+      }
+
+      function startTensionDrone() {
+        const c = ensureCtx();
+        stopTensionDrone();
+        tensionOsc = c.createOscillator();
+        tensionOsc.type = 'sine';
+        tensionOsc.frequency.value = 55;
+        tensionGain = c.createGain();
+        tensionGain.gain.value = 0;
+        const t = c.currentTime;
+        tensionGain.gain.setValueAtTime(0, t);
+        tensionGain.gain.linearRampToValueAtTime(0.05, t + 0.5);
+        tensionOsc.connect(tensionGain);
+        tensionGain.connect(c.destination);
+        tensionOsc.start(t);
+      }
+
+      function stopTensionDrone() {
+        if (!tensionOsc || !tensionGain) return;
+        const c = ensureCtx();
+        tensionGain.gain.cancelScheduledValues(c.currentTime);
+        tensionGain.gain.setValueAtTime(tensionGain.gain.value, c.currentTime);
+        tensionGain.gain.exponentialRampToValueAtTime(0.001, c.currentTime + 0.5);
+        const o = tensionOsc;
+        setTimeout(() => { try { o.stop(); } catch (e) {} tensionOsc = null; tensionGain = null; }, 600);
+      }
+
+      function playRevealChime() {
+        const c = ensureCtx();
+        const t = c.currentTime;
+        [523, 659, 784].forEach((freq, i) => {
+          const osc = c.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          const g = c.createGain();
+          g.gain.setValueAtTime(0, t + i * 0.12);
+          g.gain.linearRampToValueAtTime(0.06, t + i * 0.12 + 0.04);
+          g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.12 + 0.6);
+          osc.connect(g);
+          g.connect(c.destination);
+          osc.start(t + i * 0.12);
+          osc.stop(t + i * 0.12 + 0.7);
+          setTimeout(() => { try { osc.disconnect(); g.disconnect(); } catch (e) {} }, 1000);
+        });
+      }
+
+      function stop() {
+        if (source) { try { source.stop(); } catch (e) {} source = null; }
+        if (lfo) { try { lfo.stop(); } catch (e) {} lfo = null; }
+        isPlaying = false;
+      }
+
+      function destroy() {
+        stop();
+        stopTensionDrone();
+        if (ctx) { ctx.close(); ctx = null; }
+      }
+
+      let muted = false;
+      function setMuted(val) {
+        muted = val;
+        if (muted) {
+          if (volume) volume.gain.setTargetAtTime(0, (ctx || ensureCtx()).currentTime, 0.1);
+        } else {
+          applyIntensity(currentIntensity);
+        }
+      }
+      function isMuted() { return muted; }
+      function wrapPlay(fn) {
+        return function(...args) {
+          if (muted) return;
+          return fn.apply(this, args);
+        };
+      }
+
+      return {
+        start, setIntensity,
+        playWaveHit: wrapPlay(playWaveHit),
+        playTick: wrapPlay(playTick),
+        playReleaseSwell: wrapPlay(playReleaseSwell),
+        startTensionDrone: wrapPlay(startTensionDrone),
+        stopTensionDrone,
+        playRevealChime: wrapPlay(playRevealChime),
+        setMuted, isMuted, stop, destroy
+      };
+    }
+
+    let soundManager = null;
+
     // --- State ---
     let currentSim = null;
     let waveTimer = null;
+    let fightTimer = null;
     let fightActive = false;
-    let currentOriginalMemory = null;
-    let lastFightEndData = null;
+  let lastInputTime = 0;
+  let graceTimer = null;
+  let currentOriginalMemory = null;
+      let lastFightEndData = null;
     let lastReconstructResult = null;
     window.lastReconstructResult = null;
+    let fallbackReconstructedMemory = null;
     let currentView = 'memory';
 
     const OAK_FOR_DEMO = "The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell.";
@@ -911,36 +1419,14 @@
       if (el) el.classList.add('active');
       currentView = name;
 
-      // Set the organism mood
       if (name === 'fight') orgPhase = 'active';
       else if (name === 'reconstructing') orgPhase = 'settle';
       else if (name === 'reveal') orgPhase = 'reveal';
       else orgPhase = 'calm';
 
-      // Switch themed background layers per view
-      const bgPrimary = document.getElementById('bg-primary');
-      const bgMemory = document.getElementById('bg-memory');
-      const bgFight = document.getElementById('bg-fight');
-      const bgRecon = document.getElementById('bg-reconstructing');
-      const bgReveal = document.getElementById('bg-reveal');
-      const waveVideo = document.getElementById('wave-video');
-      [bgMemory, bgFight, bgRecon, bgReveal].forEach(el => { if (el) el.classList.remove('visible'); });
-      if (name === 'memory' && bgMemory) bgMemory.classList.add('visible');
-      else if (name === 'fight' && bgFight) bgFight.classList.add('visible');
-      else if (name === 'reconstructing' && bgRecon) bgRecon.classList.add('visible');
-      else if (name === 'reveal' && bgReveal) bgReveal.classList.add('visible');
-      if (bgPrimary) {
-        bgPrimary.style.opacity = (name === 'fight' || name === 'reveal') ? '0.06' : '0.12';
-      }
-      // Video: play on fight view, pause otherwise
-      if (waveVideo) {
-        if (name === 'fight') {
-          waveVideo.classList.add('visible');
-          waveVideo.play().catch(() => {});
-        } else {
-          waveVideo.classList.remove('visible');
-          waveVideo.pause();
-        }
+      const atmoGlow = document.getElementById('atmo-glow');
+      if (atmoGlow) {
+        atmoGlow.classList.toggle('active', name === 'fight' || name === 'reveal');
       }
     }
 
@@ -950,14 +1436,14 @@
       setTimeout(() => {
         cb();
         setTimeout(() => overlay.classList.remove('active'), 150);
-      }, 400);
+      }, 350);
     }
 
     // --- View 1: Memory Entry ---
     function bootLiveFight() {
       initOrganism();
+      soundManager = createSoundManager();
 
-      // Check for refresh-during-fight (issue #9)
       const hadLiveFlag = sessionStorage.getItem('fuzzLiveFightRefreshFlag');
       sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
 
@@ -974,68 +1460,168 @@
 
       showView('memory');
 
-      // Sand glow on keystroke
+      document.querySelectorAll('.mode-option').forEach(el => {
+        el.addEventListener('click', () => {
+          document.querySelectorAll('.mode-option').forEach(o => o.classList.remove('active'));
+          el.classList.add('active');
+          el.querySelector('input').checked = true;
+        });
+      });
+
       memTa.addEventListener('input', () => {
         memTa.classList.remove('glow');
         void memTa.offsetWidth;
         memTa.classList.add('glow');
       });
 
+      const audioToggle = document.getElementById('audio-toggle');
+      if (audioToggle) {
+        audioToggle.classList.remove('muted');
+        audioToggle.addEventListener('click', () => {
+          if (!soundManager) return;
+          const nowMuted = !soundManager.isMuted();
+          soundManager.setMuted(nowMuted);
+          audioToggle.classList.toggle('muted', nowMuted);
+        });
+      }
+
       document.getElementById('begin-btn').onclick = () => {
         const mem = (memTa.value || '').trim() || OAK_FOR_DEMO;
+        const mode = document.querySelector('input[name="fight-mode"]:checked').value;
         if (notice) notice.style.display = 'none';
-        fadeTransition(() => startFight(mem));
+        if (soundManager) soundManager.start();
+        fadeTransition(() => startFight(mem, mode));
       };
     }
 
     // --- View 2: The Endless Fight ---
-    function startFight(memory) {
+    const JUNK = ['#', '%', '&', '@', '~', '?', '+', '=', '$', '!', '^', '*'];
+
+    const SYNONYMS = {
+      'old': 'ancient', 'young': 'youthful', 'big': 'large', 'small': 'tiny',
+      'beautiful': 'lovely', 'good': 'fine', 'poor': 'faint', 'fast': 'swift',
+      'slow': 'gentle', 'strong': 'deep', 'weak': 'soft', 'happy': 'glad',
+      'sad': 'somber', 'dark': 'dim', 'bright': 'vivid', 'cold': 'chill',
+      'warm': 'balmy', 'fell': 'drifted', 'stood': 'remained', 'walked': 'wandered',
+      'ran': 'rushed', 'looked': 'gazed', 'saw': 'noticed', 'heard': 'caught',
+      'said': 'murmured', 'made': 'crafted', 'came': 'arrived', 'went': 'drifted',
+      'little': 'slight', 'great': 'vast', 'long': 'endless', 'short': 'brief',
+      'high': 'lofty', 'deep': 'profound', 'wide': 'broad', 'thin': 'slender',
+      'thick': 'dense', 'golden': 'amber', 'silver': 'argent', 'fierce': 'wild',
+      'quiet': 'hushed', 'loud': 'distant', 'sharp': 'keen', 'dull': 'still',
+      'smooth': 'silken', 'rough': 'cragged', 'below': 'beneath', 'above': 'overhead',
+      'beside': 'alongside', 'river': 'stream', 'tree': 'oak',
+    };
+
+    function applyQuietRewrite(text) {
+      const words = text.split(/(\b[\w']+\b)/);
+      const eligible = [];
+      for (let i = 0; i < words.length; i++) {
+        const lower = words[i].toLowerCase();
+        if (SYNONYMS[lower] && lower.length > 1) eligible.push(i);
+      }
+      const count = Math.max(1, Math.floor(eligible.length * 0.35));
+      const shuffled = [...eligible].sort(() => Math.random() - 0.5);
+      for (let j = 0; j < count; j++) {
+        const idx = shuffled[j];
+        const word = words[idx];
+        const lower = word.toLowerCase();
+        const replacement = SYNONYMS[lower];
+        words[idx] = word[0] === word[0].toUpperCase()
+          ? replacement[0].toUpperCase() + replacement.slice(1)
+          : replacement;
+      }
+      return words.join('');
+    }
+
+    function startFight(memory, mode) {
       showView('fight');
       currentOriginalMemory = memory;
       currentSim = createBrowserFuzzSimulator(memory);
-      fightActive = true;
       lastFightEndData = null;
       sessionStorage.setItem('fuzzLiveFightRefreshFlag', '1');
 
-      const input = document.getElementById('fight-input');
       const display = document.getElementById('fight-display');
-      const levelEl = document.getElementById('fuzz-level-display');
+      const input = document.getElementById('fight-input');
+      const fuzzNum = document.getElementById('fuzz-level-number');
       const releaseBtn = document.getElementById('release-btn');
       const waveLine = document.getElementById('wave-line');
+      const ringFill = document.getElementById('fuzz-ring-fill');
+      const levelEl = document.getElementById('fuzz-level-display');
+      const timerDisplay = document.getElementById('timer-display');
 
-      input.value = currentSim.getCurrentFuzz();
+      input.value = memory;
+      input.classList.add('awaiting');
       releaseBtn.disabled = false;
+      releaseBtn.classList.remove('primed');
+      const dotsContainer = document.getElementById('fresh-clue-dots');
+      if (dotsContainer) dotsContainer.innerHTML = '';
+      const maxFuzzChars = memory.length;
+      timerDisplay.textContent = '';
+      timerDisplay.className = '';
 
-      function renderFuzz(newlyFuzzed) {
+      if (mode === 'timed') {
+        let remaining = 60;
+        timerDisplay.textContent = '0:60';
+        fightTimer = setInterval(() => {
+          remaining--;
+          if (remaining >= 10) {
+            timerDisplay.textContent = '0:' + remaining;
+          } else if (remaining > 0) {
+            timerDisplay.textContent = '0:0' + remaining;
+            timerDisplay.classList.add('warning');
+          } else {
+            timerDisplay.textContent = '';
+            timerDisplay.className = '';
+            if (fightActive) stopFight();
+          }
+        }, 1000);
+      }
+
+      function updateDisplay(newlyCleaned) {
         if (!currentSim) return;
         const fuzz = currentSim.getCurrentFuzz();
         const level = currentSim.getCurrentFuzzLevel();
+        const chars = fuzz.split('');
         let html = '';
-        for (let i = 0; i < fuzz.length; i++) {
-          if (fuzz[i] === '*') {
-            const isNew = newlyFuzzed && newlyFuzzed.includes(i);
-            html += `<span class="fuzzed${isNew ? ' dissolving' : ''}">·</span>`;
+        for (let i = 0; i < chars.length; i++) {
+          if (chars[i] === '*') {
+            html += '<span class="junk">' + JUNK[(i * 7 + 13) % JUNK.length] + '</span>';
           } else {
-            html += fuzz[i];
+            const glow = newlyCleaned && newlyCleaned.has(i) ? ' class="char-clean glow"' : ' class="char-clean"';
+            html += '<span' + glow + '>' + chars[i] + '</span>';
           }
         }
         display.innerHTML = html;
-        if (levelEl) levelEl.textContent = `FUZZ LEVEL ${level}`;
+        if (fuzzNum) fuzzNum.textContent = `FUZZ ${level}`;
+        if (ringFill) {
+          const circumference = 113.1;
+          const pct = Math.min(1, level / Math.max(13, maxFuzzChars));
+          ringFill.style.strokeDashoffset = (circumference * (1 - pct)).toFixed(1);
+        }
         const fill = document.getElementById('wave-line-fill');
         if (fill) {
-          const pct = Math.min(100, (level / 13) * 100);
+          const pct = Math.min(100, (level / Math.max(13, maxFuzzChars)) * 100);
           fill.style.width = pct + '%';
         }
+        if (levelEl) levelEl.textContent = `FUZZ LEVEL ${level}`;
       }
 
       function triggerWaveSweep() {
         const sweep = document.getElementById('wave-sweep');
+        const sweepDeep = document.getElementById('wave-sweep-deep');
         const surface = document.getElementById('fight-surface');
         const wl = document.getElementById('wave-line');
+        const fuzzNum = document.getElementById('fuzz-level-number');
         if (sweep) {
           sweep.classList.remove('active');
           void sweep.offsetWidth;
           sweep.classList.add('active');
+        }
+        if (sweepDeep) {
+          sweepDeep.classList.remove('active');
+          void sweepDeep.offsetWidth;
+          sweepDeep.classList.add('active');
         }
         if (surface) {
           surface.classList.remove('shake');
@@ -1048,12 +1634,13 @@
           wl.classList.add('pulse');
           setTimeout(() => wl.classList.remove('pulse'), 300);
         }
-        if (levelEl) {
-          levelEl.classList.remove('pulse');
-          void levelEl.offsetWidth;
-          levelEl.classList.add('pulse');
-          setTimeout(() => levelEl.classList.remove('pulse'), 300);
+        if (fuzzNum) {
+          fuzzNum.classList.remove('pulse');
+          void fuzzNum.offsetWidth;
+          fuzzNum.classList.add('pulse');
+          setTimeout(() => fuzzNum.classList.remove('pulse'), 400);
         }
+        if (soundManager) soundManager.playWaveHit();
       }
 
       function spawnFoam(count) {
@@ -1062,43 +1649,70 @@
         for (let i = 0; i < count; i++) {
           const foam = document.createElement('div');
           foam.className = 'foam-particle';
-          const dx = (Math.random() - 0.5) * 120;
-          const dy = -20 - Math.random() * 60;
-          foam.style.left = (30 + Math.random() * 60) + '%';
+          const dx = (Math.random() - 0.5) * 100;
+          const dy = -15 - Math.random() * 50;
+          foam.style.left = (20 + Math.random() * 60) + '%';
           foam.style.top = (20 + Math.random() * 60) + '%';
           foam.style.setProperty('--foam-dx', dx + 'px');
           foam.style.setProperty('--foam-dy', dy + 'px');
-          foam.style.width = (2 + Math.random() * 4) + 'px';
+          foam.style.width = (1.5 + Math.random() * 3) + 'px';
           foam.style.height = foam.style.width;
           container.appendChild(foam);
-          setTimeout(() => foam.remove(), 800);
+          setTimeout(() => foam.remove(), 900);
         }
       }
 
+      const viewFight = document.getElementById('view-fight');
+      function applyGracePause() {
+        if (!viewFight) return;
+        viewFight.classList.add('waves-paused');
+        if (graceTimer) clearTimeout(graceTimer);
+        graceTimer = setTimeout(() => {
+          viewFight.classList.remove('waves-paused');
+          graceTimer = null;
+        }, 1500);
+      }
+
+      let lastFreshClueCount = currentSim.getFreshClues().length;
+      function addFreshClueDot() {
+        if (!dotsContainer) return;
+        const dot = document.createElement('span');
+        dot.className = 'fresh-clue-dot';
+        dotsContainer.appendChild(dot);
+        if (!releaseBtn.classList.contains('primed')) releaseBtn.classList.add('primed');
+      }
       input.oninput = () => {
+        input.classList.remove('awaiting');
+        applyGracePause();
+        lastInputTime = Date.now();
         if (currentSim && fightActive) {
-          currentSim.feedRewrite(input.value);
-          input.value = currentSim.getCurrentFuzz();
-          renderFuzz();
+          const beforeClues = currentSim.getFreshClues().length;
+          const cleaned = currentSim.feedRewrite(input.value);
+          const afterClues = currentSim.getFreshClues().length;
+          if (cleaned.size > 0 && soundManager) soundManager.playTick();
+          if (afterClues > lastFreshClueCount) {
+            for (let c = lastFreshClueCount; c < afterClues; c++) addFreshClueDot();
+            lastFreshClueCount = afterClues;
+          }
+          if (cleaned.size > 0) updateDisplay(cleaned);
         }
       };
 
-      // The Waves — Dissolving at organic intervals
       stopWaves();
+      fightActive = true;
       waveTimer = setInterval(() => {
         if (!currentSim || !fightActive) return;
-        const before = currentSim.getCurrentFuzz();
-        currentSim.applyWave();
-        const after = currentSim.getCurrentFuzz();
-        const newlyFuzzed = [];
-        for (let i = 0; i < before.length; i++) {
-          if (before[i] !== '*' && after[i] === '*') newlyFuzzed.push(i);
+        if (Date.now() - lastInputTime < 1500) return;
+        const waveApplied = currentSim.applyWave();
+        if (!waveApplied) {
+          stopWaves();
+          return;
         }
-        input.value = after;
-        renderFuzz(newlyFuzzed);
+        updateDisplay();
+        if (soundManager) soundManager.setIntensity(currentSim.getCurrentFuzzLevel(), maxFuzzChars);
         triggerWaveSweep();
-        if (newlyFuzzed.length > 0) spawnFoam(newlyFuzzed.length * 2);
-      }, 600 + Math.random() * 120);
+        spawnFoam(3);
+      }, 500 + Math.random() * 200);
 
       releaseBtn.onclick = () => stopFight();
       input.addEventListener('keydown', (e) => {
@@ -1108,13 +1722,18 @@
         }
       });
 
-      renderFuzz();
+      updateDisplay();
     }
 
     function stopWaves() {
       if (waveTimer) { clearInterval(waveTimer); waveTimer = null; }
+      if (fightTimer) { clearInterval(fightTimer); fightTimer = null; }
+      if (graceTimer) { clearTimeout(graceTimer); graceTimer = null; }
       fightActive = false;
       sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
+      if (soundManager) soundManager.stop();
+      const td = document.getElementById('timer-display');
+      if (td) { td.textContent = ''; td.className = ''; }
     }
 
     // stopFight: end the Endless Fight, collect the fight-end data contract, send to /reconstruct.
@@ -1127,9 +1746,34 @@
       lastFightEndData = end;
       document.getElementById('release-btn').disabled = true;
 
-      fadeTransition(() => {
-        sendToReconstruct(end);
+      triggerFinalWave();
+      if (soundManager) soundManager.playReleaseSwell();
+
+      setTimeout(() => {
+        fadeTransition(() => {
+          sendToReconstruct(end);
+        });
+      }, 700);
+    }
+
+    function triggerFinalWave() {
+      ['wave-sweep', 'wave-sweep-deep'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.remove('active');
+          void el.offsetWidth;
+          el.classList.add('final');
+          el.style.animation = id === 'wave-sweep' ? 'waveSweep 1400ms ease-out forwards' : 'waveSweepDeep 1800ms ease-out forwards';
+        }
       });
+      const surface = document.getElementById('fight-surface');
+      if (surface) {
+        surface.classList.remove('shake');
+        void surface.offsetWidth;
+        surface.style.transition = 'transform 1.8s ease-out';
+        surface.style.transform = 'translateY(3px)';
+        setTimeout(() => { surface.style.transform = ''; surface.style.transition = ''; }, 2000);
+      }
     }
 
     function sendToReconstruct(endData) {
@@ -1138,7 +1782,6 @@
       document.getElementById('resilience-panel').style.display = 'none';
       document.getElementById('continue-btn').style.display = 'none';
 
-      // Reset step content
       for (let i = 1; i <= 4; i++) {
         const step = document.getElementById('step-' + i);
         if (step) {
@@ -1176,52 +1819,129 @@
       });
     }
 
+    function buildProgressiveStep(finalFuzz, freshClues, originalText, stepNum) {
+      if (!finalFuzz || !originalText) return '';
+      const chars = finalFuzz.split('');
+
+      if (stepNum >= 4) return applyQuietRewrite(originalText);
+
+      if (freshClues && freshClues.length > 0) {
+        for (const clue of freshClues) {
+          const words = clue.words;
+          const idx = originalText.indexOf(words);
+          if (idx >= 0) {
+            for (let j = 0; j < words.length; j++) {
+              chars[idx + j] = originalText[idx + j];
+            }
+          }
+        }
+      }
+      if (stepNum === 1) return chars.join('');
+
+      if (stepNum === 2) {
+        const words = originalText.match(/\S+/g) || [];
+        for (const word of words) {
+          const idx = originalText.indexOf(word);
+          if (idx < 0) continue;
+          let cleanCount = 0;
+          for (let j = 0; j < word.length; j++) {
+            if (chars[idx + j] !== '*') cleanCount++;
+          }
+          if (cleanCount > word.length * 0.4) {
+            for (let j = 0; j < word.length; j++) {
+              chars[idx + j] = originalText[idx + j];
+            }
+          }
+        }
+        return chars.join('');
+      }
+
+      if (stepNum === 3) {
+        const words = originalText.match(/\S+/g) || [];
+        for (const word of words) {
+          const idx = originalText.indexOf(word);
+          if (idx < 0) continue;
+          const hasAnyClean = word.split('').some((_, j) => chars[idx + j] !== '*');
+          if (hasAnyClean) {
+            for (let j = 0; j < word.length; j++) {
+              chars[idx + j] = originalText[idx + j];
+            }
+          }
+        }
+        return chars.join('');
+      }
+
+      return chars.join('');
+    }
+
+    function stepDisplayText(text) {
+      const chars = text.split('');
+      for (let i = 0; i < chars.length; i++) {
+        if (chars[i] === '*') chars[i] = JUNK[(i * 7 + 13) % JUNK.length];
+      }
+      return chars.join('');
+    }
+
     // --- View 3: Progressive 4 Cleaning Steps (issue #7) ---
     // step-by-step reveal with short pauses for Sand Drawing metaphor. Progressive display.
     function displayProgressiveSteps(data) {
-      const stepsData = (data && data.steps) || {
-        step1: "The strongest Fresh Clues return first. The clearest words settle back into their places.",
-        step2: "The remaining Clues in the Fuzz guide more of the Memory back into form.",
-        step3: "Training fills the last uncertain parts. Small natural adjustments appear.",
-        step4: "One last quiet pass. The form is close yet changed by Creative Guessing."
-      };
+      document.getElementById('reconstruct-status').textContent = 'The Smart Robot is studying your Fresh Clues…';
+      if (soundManager) soundManager.startTensionDrone();
 
-      document.getElementById('reconstruct-status').textContent = 'Cleaning Steps on the Fuzz…';
+      const recon = (data && data.reconstructed_memory) || currentOriginalMemory || '';
 
-      const keys = ['step1', 'step2', 'step3', 'step4'];
-      let delay = 500;
+      const statuses = [
+        'Step 1 of 4 — Putting back the clearest words and short phrases…',
+        'Step 2 of 4 — Filling in more letters and words around the clues…',
+        'Step 3 of 4 — Using Training to guess the rest…',
+        'The Smart Robot has finished Reconstructing.',
+      ];
 
-      keys.forEach((key, idx) => {
-        // Progressive with pause between each step
+      const finalFuzz = (lastFightEndData && lastFightEndData.final_fuzz) || recon;
+      const freshClues = (lastFightEndData && lastFightEndData.fresh_clues) || [];
+
+      let delay = 1200;
+
+      for (let i = 0; i < 4; i++) {
+        const stepNum = i + 1;
+        const serverStep = data && data.steps && data.steps['step' + stepNum];
+        const rawStep = (serverStep && serverStep.trim())
+          ? serverStep
+          : buildProgressiveStep(finalFuzz, freshClues, recon, stepNum);
+        const stepText = stepDisplayText(rawStep);
+
+        if (i === 3 && (!serverStep || !serverStep.trim())) {
+          fallbackReconstructedMemory = stepText;
+        }
+
+        const delayHere = delay;
+
         setTimeout(() => {
-          const stepEl = document.getElementById('step-' + (idx + 1));
+          const stepEl = document.getElementById('step-' + stepNum);
           if (stepEl) {
-            stepEl.querySelector('.step-content').textContent = stepsData[key] || data.steps[key] || '';
-            // Populate from data.steps using steps['step...'] pattern
-            if (data && data.steps && data.steps['step' + (idx + 1)]) {
-              stepEl.querySelector('.step-content').textContent = data.steps['step' + (idx + 1)];
-            }
+            const contentEl = stepEl.querySelector('.step-content');
+            if (contentEl) contentEl.textContent = stepText;
             stepEl.classList.remove('opacity-60');
             stepEl.classList.add('visible');
-            stepEl.style.borderColor = 'rgba(255,255,255,0.15)';
+            stepEl.style.borderColor = 'rgba(41,151,255,0.15)';
           }
-          document.getElementById('reconstruct-status').textContent =
-            idx < 3 ? `Step ${idx + 1} of 4…` : 'Reconstructing complete.';
+          document.getElementById('reconstruct-status').textContent = statuses[i];
 
-          if (idx === 3) {
-            // All 4 Cleaning Steps done — show continue
+          if (i === 3) {
+            if (soundManager) soundManager.stopTensionDrone();
             setTimeout(() => {
+              if (soundManager) soundManager.playRevealChime();
               document.getElementById('continue-btn').style.display = '';
               document.getElementById('continue-btn').onclick = () => {
-                const recon = (data && data.reconstructed_memory) ||
-                  "The ancient oak tree by the gentle river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.";
-                fadeTransition(() => populateReveal(currentOriginalMemory, recon));
+                const reconToShow = fallbackReconstructedMemory || recon;
+                fadeTransition(() => populateReveal(currentOriginalMemory, reconToShow));
               };
-            }, 400);
+            }, 500);
           }
         }, delay);
-        delay += 900; // deliberate, breathing pause between steps
-      });
+
+        delay += i === 2 ? 1400 : 900;
+      }
     }
 
     // --- Resilience (issue #10) ---
@@ -1230,8 +1950,6 @@
       document.getElementById('resilience-panel').style.display = 'flex';
     }
 
-    // tryAgainReconstruct: re-post the exact same fight-end data contract (issue #10).
-    // Reusing the exact same fight-end data contract so the player doesn't lose their Endless Fight.
     function tryAgainReconstruct() {
       if (lastFightEndData) {
         document.getElementById('resilience-panel').style.display = 'none';
@@ -1239,11 +1957,9 @@
       }
     }
 
-    // waitLonger: graceful keep-waiting (issue #10).
     function waitLonger() {
       document.getElementById('resilience-panel').style.display = 'none';
       document.getElementById('reconstruct-status').textContent = 'Still waiting for the Smart Robot…';
-      // Extended timeout — wait another 30s
       setTimeout(() => {
         if (currentView === 'reconstructing' && !lastReconstructResult) {
           showResiliencePanel();
@@ -1257,16 +1973,27 @@
     // The Quiet Rewrite is not an Exact Copy. You lived the Real Experience and the Feeling Lesson.
     function populateReveal(original, reconstructed) {
       showView('reveal');
+      warmOrganism(4000);
 
       document.getElementById('original-memory-display').textContent = original || '';
 
+      const reconDisplay = document.getElementById('reconstructed-memory-display');
+      reconDisplay.classList.add('delayed');
       const comp = createBrowserRevealComparator();
       const comparison = comp.compare(original || '', reconstructed || '');
-      document.getElementById('reconstructed-memory-display').innerHTML =
-        comp.toHighlightedHtml(comparison.reconstructedSegments);
+      reconDisplay.innerHTML = comp.toHighlightedHtml(comparison.reconstructedSegments);
 
-      document.getElementById('feeling-lesson-msg').textContent =
-        'The Smart Robot used its Training and the Fresh Clues for a Best Guess via Creative Guessing. The Quiet Rewrite is not an Exact Copy. You lived the Real Experience.';
+      const clueCount = (lastFightEndData && lastFightEndData.fresh_clues
+        ? lastFightEndData.fresh_clues.length : 0);
+      let lessonMsg;
+      if (clueCount === 0) {
+        lessonMsg = 'The Smart Robot used only its Training for the Best Guess. Without Fresh Clues, the Reconstructed Memory relied on what little remained in the Fuzz.';
+      } else if (clueCount === 1) {
+        lessonMsg = 'The Smart Robot used your 1 Fresh Clue and its Training for the Best Guess via Creative Guessing. The Quiet Rewrite is not an Exact Copy.';
+      } else {
+        lessonMsg = 'The Smart Robot used your ' + clueCount + ' Fresh Clues and its Training for a far better Best Guess via Creative Guessing. The Quiet Rewrite is not an Exact Copy. You lived the Real Experience.';
+      }
+      document.getElementById('feeling-lesson-msg').textContent = lessonMsg;
     }
 
     // --- Reset (issue #9) ---
@@ -1278,9 +2005,9 @@
       lastReconstructResult = null;
       window.lastReconstructResult = null;
       lastFightEndData = null;
+      fallbackReconstructedMemory = null;
       fightActive = false;
 
-      // Clear 4 Cleaning Steps (step-1 through step-4) content + restore initial opacity-60
       for (let i = 1; i <= 4; i++) {
         const step = document.getElementById('step-' + i);
         if (step) {
@@ -1291,7 +2018,6 @@
         }
       }
 
-      // Clear reveal displays
       const origDisp = document.getElementById('original-memory-display');
       const reconDisp = document.getElementById('reconstructed-memory-display');
       if (origDisp) origDisp.textContent = '';
@@ -1301,7 +2027,6 @@
       const endPanel = document.getElementById('end-data-panel');
       if (endPanel) endPanel.innerHTML = '';
 
-      // Reset reconstruct status + hide resilience
       const status = document.getElementById('reconstruct-status');
       if (status) status.textContent = '';
       const resPanel = document.getElementById('resilience-panel');
@@ -1309,19 +2034,26 @@
       const contBtn = document.getElementById('continue-btn');
       if (contBtn) contBtn.style.display = 'none';
 
-      // Clear fight display
+      const viewFightReset = document.getElementById('view-fight');
+      if (viewFightReset) viewFightReset.classList.remove('waves-paused');
+      const dotsReset = document.getElementById('fresh-clue-dots');
+      if (dotsReset) dotsReset.innerHTML = '';
+      const releaseBtnReset = document.getElementById('release-btn');
+      if (releaseBtnReset) releaseBtnReset.classList.remove('primed');
       const fightDisp = document.getElementById('fight-display');
       if (fightDisp) fightDisp.innerHTML = '';
       const fightInput = document.getElementById('fight-input');
-      if (fightInput) fightInput.value = '';
+      if (fightInput) { fightInput.value = ''; fightInput.classList.remove('awaiting'); }
 
-      // Return to fresh empty Memory input — value = '' for clean start
       const memTa = document.querySelector('#view-memory textarea');
       if (memTa) memTa.value = '';
       const notice = document.getElementById('reset-notice');
       if (notice) notice.style.display = 'none';
 
       sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
+      if (orgWarmTimer) { clearTimeout(orgWarmTimer); orgWarmTimer = null; }
+      const audioToggleReset = document.getElementById('audio-toggle');
+      if (audioToggleReset) audioToggleReset.classList.remove('muted');
 
       fadeTransition(() => showView('memory'));
     }

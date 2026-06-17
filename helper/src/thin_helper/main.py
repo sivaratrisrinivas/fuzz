@@ -11,9 +11,15 @@ at the end of the Endless Fight, then forgets everything after one Smart Robot c
 All terms here are from the locked glossary in CONTEXT.md.
 """
 
+import logging
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .reconstruct_coordinator import ReconstructCoordinator
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Fuzz Thin Helper",
@@ -25,6 +31,19 @@ app = FastAPI(
         "See PRD #1, ADR-0001, CONTEXT.md, issues #2/#5/#6."
     ),
     version="0.3.0-issue6-one-call-ephemeral",
+)
+
+# CORS middleware for dev: allows the live fight box (Bun dev server on port 3000)
+# to call the thin helper (port 8000) directly without proxy during development.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+    ],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 # The Reconstruct Coordinator (deep module, only entrypoint per issue #5) is instantiated here.
@@ -63,5 +82,16 @@ def reconstruct_endpoint(payload: dict):
 
     Thin coordinator only. Privacy: only contract fields are accepted; original Memory never enters the helper.
     """
-    result = _coordinator.reconstruct_from_fight_end(payload)
-    return result
+    try:
+        result = _coordinator.reconstruct_from_fight_end(payload)
+        return result
+    except Exception as exc:
+        logger.exception("Reconstructing failed during one Smart Robot call (ephemeral forget still applies).")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": "Reconstructing encountered an issue. The Smart Robot may be slow or unavailable.",
+                "detail": str(exc),
+                "note": "Original Memory never entered the helper. All data has been ephemerally forgotten.",
+            },
+        )

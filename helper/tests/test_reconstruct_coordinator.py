@@ -568,19 +568,31 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
     def test_default_model_caller_uses_hugging_face_chat_completion_for_qwen_supported_task(self):
         # Regression for the local uvicorn failure:
         # Qwen/Qwen2.5-7B-Instruct is exposed via HF InferenceClient for chat, so the default
-        # Smart Robot path must call InferenceClient.chat_completion instead of text_generation.
+        # Smart Robot path must call either chat.completions.create (modern) or chat_completion (legacy).
+        # It must never use text_generation.
         import os
         import sys
         import types
         from thin_helper.reconstruct_coordinator import ReconstructCoordinator
 
         sample_recon = (self.prompts_dir / "sample-reconstruction-01.md").read_text(encoding="utf-8")
-        calls = {"chat_completion": 0, "text_generation": 0, "messages": None, "max_tokens": None}
+        calls = {"chat_completions_create": 0, "chat_completion": 0, "text_generation": 0, "messages": None, "max_tokens": None}
+
+        class FakeChatCompletions:
+            def create(self, *, model, messages, max_tokens, temperature):
+                calls["chat_completions_create"] += 1
+                calls["messages"] = messages
+                calls["max_tokens"] = max_tokens
+                return {"choices": [{"message": {"content": sample_recon}}]}
+
+        class FakeChat:
+            completions = FakeChatCompletions()
 
         class FakeInferenceClient:
             def __init__(self, model, token):
                 self.model = model
                 self.token = token
+                self.chat = FakeChat()
 
             def chat_completion(self, *, messages, max_tokens, temperature):
                 calls["chat_completion"] += 1
@@ -627,10 +639,15 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
             else:
                 os.environ["FUZZ_HF_ENDPOINT_URL"] = previous_endpoint
 
-        self.assertEqual(calls["chat_completion"], 1)
+        # Modern API (chat.completions.create) should be used; legacy chat_completion is fallback.
+        self.assertEqual(calls["chat_completions_create"], 1, "modern chat.completions.create should be called")
+        self.assertEqual(calls["chat_completion"], 0, "legacy chat_completion should not be called when modern API works")
         self.assertEqual(calls["text_generation"], 0)
         self.assertEqual(calls["max_tokens"], 1200)
-        self.assertEqual(calls["messages"], [{"role": "user", "content": "locked prompt"}])
+        self.assertEqual(calls["messages"], [
+            {"role": "system", "content": "You reconstruct text using exact === STEP 1 === through === STEP 4 === then === RECONSTRUCTED MEMORY === markers. Output ONLY the five markers with content after each. No preamble. No explanations. No meta-commentary."},
+            {"role": "user", "content": "locked prompt"}
+        ])
         self.assertIn("=== RECONSTRUCTED MEMORY ===", raw)
 
     def test_chat_content_extractor_handles_dict_and_object_hugging_face_shapes(self):

@@ -58,32 +58,31 @@ export class FuzzSimulator {
     return this.level;
   }
 
-  // applyWave: for live UI timer (picks some positions deterministically or randomly in future cycles).
-  // For cycle 2 we primarily drive via explicit applyWaveToPositions for reproducible tests.
-  applyWave(): void {
-    // Minimal: fuzz the first currently correct position (if any). Real selection + junk variety later.
+  // applyWave: for live UI timer — picks a random unfuzzed position for organic feel.
+  // For cycle 2+ tests we drive via explicit applyWaveToPositions for reproducibility.
+  applyWave(): boolean {
+    const unfuzzed: number[] = [];
     for (let i = 0; i < this.current.length; i++) {
       if (this.current[i] === this.original[i]) {
-        this.applyWaveToPositions([i]);
-        return;
+        unfuzzed.push(i);
       }
     }
-    // no more to fuzz; still count a wave? for now no-op if fully fuzzed.
+    if (unfuzzed.length === 0) return false; // fully fuzzed — no wave
+    const pick = unfuzzed[Math.floor(Math.random() * unfuzzed.length)];
+    this.applyWaveToPositions([pick]);
+    return true;
   }
 
   // Explicit wave for deterministic test scenarios (core for isolation tests of wave + timing).
   // One call = one wave event (+1 level). Only mutates currently-correct positions (those still matching original).
   applyWaveToPositions(indices: number[]): void {
-    let mutated = false;
     const chars = this.current.split("");
     for (const i of indices) {
       if (i >= 0 && i < chars.length && chars[i] === this.original[i]) {
         chars[i] = "*"; // primary visible junk for Dissolving / Sand Drawing feel (sample data uses *)
-        mutated = true;
       }
     }
     this.current = chars.join("");
-    // A wave application always advances the Fuzz Level (even if no new positions were available).
     this.level += 1;
   }
 

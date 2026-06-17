@@ -29,10 +29,13 @@ helper/prompts/sample-fight-end-data.json , helper/prompts/sample-reconstruction
 docs/adr/0001-... , CONTEXT.md , box/src/fuzz-simulator.ts (FightEndData contract), the dev validation script.
 """
 
+import logging
 from pathlib import Path
 from typing import Optional, Any
 
 from .prompt_constructor import PromptConstructor
+
+logger = logging.getLogger(__name__)
 
 
 class ReconstructCoordinator:
@@ -57,57 +60,99 @@ class ReconstructCoordinator:
         """Default one-call implementation for the Smart Robot (Qwen on HF).
         DEV iteration: HF_TOKEN + ZeroGPU/Pro (or dedicated Space). Production: dedicated nvidia-l4 endpoint (env configurable).
         Never auto-calls production during dev. See validate script + huggingface-zerogpu skill.
-        If no token/client available, falls back to validated #3 sample for compat (old call sites / no-token dev).
+        If no token/client available, returns empty markers — client-side buildProgressiveStep handles the fallback
+        using actual fight data instead of a static sample.
         """
         import os
-        from pathlib import Path as _P
         try:
             from huggingface_hub import InferenceClient
         except Exception:
             InferenceClient = None  # type: ignore
         token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
         if InferenceClient is None or not token:
-            # Compat fallback (keeps endpoint / old tests working without token; real call only when configured).
-            here = _P(__file__).resolve().parent
-            sample_path = here.parent.parent / "prompts" / "sample-reconstruction-01.md"
-            return sample_path.read_text(encoding="utf-8")
+            # Return empty markers — the client will use its own buildProgressiveStep
+            # with the actual final_fuzz + fresh_clues from the fight end data.
+            return (
+                "=== STEP 1 ===\n\n"
+                "=== STEP 2 ===\n\n"
+                "=== STEP 3 ===\n\n"
+                "=== STEP 4 ===\n\n"
+                "=== RECONSTRUCTED MEMORY ===\n"
+            )
         model = os.environ.get("FUZZ_SMART_ROBOT_MODEL", "Qwen/Qwen2.5-7B-Instruct")
         # If dedicated endpoint URL provided via env, InferenceClient accepts it as model= too.
         endpoint = os.environ.get("FUZZ_HF_ENDPOINT_URL")
         use_model = endpoint or model
         client = InferenceClient(model=use_model, token=token)
-        result = client.chat_completion(
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1200,
-            temperature=0.7,
-        )
-        return self._extract_chat_content(result)
+        messages = [
+            {"role": "system", "content": "You reconstruct text using exact === STEP 1 === through === STEP 4 === then === RECONSTRUCTED MEMORY === markers. Output ONLY the five markers with content after each. No preamble. No explanations. No meta-commentary."},
+            {"role": "user", "content": prompt}
+        ]
+        try:
+            # Modern HF InferenceClient API (huggingface_hub >= 0.24): chat.completions.create
+            # Preferred for Qwen/Qwen2.5-7B-Instruct and compatible providers.
+            result = client.chat.completions.create(
+                model=use_model,
+                messages=messages,
+                max_tokens=1200,
+                temperature=0.7,
+            )
+            return self._extract_chat_content(result)
+        except (AttributeError, TypeError):
+            # Fallback for older huggingface_hub versions: use chat_completion method
+            logger.info("Falling back to client.chat_completion (older huggingface_hub version).")
+            result = client.chat_completion(
+                messages=messages,
+                max_tokens=1200,
+                temperature=0.7,
+            )
+            return self._extract_chat_content(result)
+        except Exception as exc:
+            # If the Smart Robot call fails entirely, fall back to sample for resilience.
+            logger.warning(
+                "Smart Robot one-call failed (%s: %s). Falling back to validated sample for Reconstructing.",
+                type(exc).__name__, exc,
+            )
+            here = _P(__file__).resolve().parent
+            sample_path = here.parent.parent / "prompts" / "sample-reconstruction-01.md"
+            return sample_path.read_text(encoding="utf-8")
 
     @staticmethod
     def _extract_chat_content(result: Any) -> str:
-        """Extract the Smart Robot text from the Hugging Face chat response shape."""
+        """Extract the Smart Robot text from the Hugging Face chat response shape.
+
+        Handles multiple response formats:
+        - Plain string (passthrough)
+        - Modern ChatCompletionOutput object (attribute access: .choices[0].message.content)
+        - Legacy dict format ({"choices": [{"message": {"content": ...}}]})
+        """
         if isinstance(result, str):
             return result
 
+        # Try attribute-based access first (modern ChatCompletionOutput from chat.completions.create)
+        choices = getattr(result, "choices", None)
+        if choices and len(choices) > 0:
+            first_choice = choices[0]
+            message = getattr(first_choice, "message", None)
+            if message is not None:
+                content = getattr(message, "content", None)
+                if content is not None:
+                    return str(content)
+                # message might be a dict in some response shapes
+                if isinstance(message, dict):
+                    content = message.get("content")
+                    if content is not None:
+                        return str(content)
+
+        # Fallback: dict-based access (legacy or raw JSON response)
         if isinstance(result, dict):
-            choices = result.get("choices") or []
-            if choices:
-                message = choices[0].get("message", {})
+            dict_choices = result.get("choices") or []
+            if dict_choices:
+                message = dict_choices[0].get("message", {})
                 content = message.get("content")
                 if content is not None:
                     return str(content)
             return str(result)
-
-        choices = getattr(result, "choices", None) or []
-        if choices:
-            first_choice = choices[0]
-            message = getattr(first_choice, "message", None)
-            if isinstance(message, dict):
-                content = message.get("content")
-            else:
-                content = getattr(message, "content", None)
-            if content is not None:
-                return str(content)
 
         return str(result)
 
@@ -124,26 +169,46 @@ class ReconstructCoordinator:
         """Parse the locked marked format produced by the Smart Robot (4 Cleaning Steps + final).
 
         Returns dict with keys: step1, step2, step3, step4, reconstructed_memory.
-        The implementation is the production version of the minimal parser introduced (test-only) in #3.
-        Robust against the exact markers in the validated sample-reconstruction-01.md.
+        Uses a robust marker-finding approach: finds ALL markers in order and extracts
+        content between consecutive markers. Handles format variations like missing newlines,
+        markdown code fences, and extra whitespace. Falls back to raw output if no markers found.
         """
         import re
         result: dict[str, str] = {}
-        markers = [
-            ("step1", "=== STEP 1 ==="),
-            ("step2", "=== STEP 2 ==="),
-            ("step3", "=== STEP 3 ==="),
-            ("step4", "=== STEP 4 ==="),
-            ("reconstructed_memory", "=== RECONSTRUCTED MEMORY ==="),
-        ]
-        for key, marker in markers:
-            # Capture content after this marker until the next === marker or end of text.
-            pattern = re.escape(marker) + r"\s*(.*?)(?=\n===|\Z)"
-            match = re.search(pattern, raw_output, re.DOTALL | re.IGNORECASE)
-            if match:
-                result[key] = match.group(1).strip()
-            else:
-                result[key] = ""
+
+        # Normalize: strip whitespace, remove markdown code fences
+        cleaned = raw_output.strip()
+        cleaned = re.sub(r'^```(?:text|markdown)?\n?|```$', '', cleaned, flags=re.IGNORECASE).strip()
+
+        # Find all markers in order of appearance
+        pattern = r"=== (?:STEP \d+|RECONSTRUCTED MEMORY) ==="
+        matches = list(re.finditer(pattern, cleaned, re.IGNORECASE))
+
+        if not matches:
+            # No markers at all — return clean text as best-effort reconstruction
+            cleaned = re.sub(r'\n---+[\s\S]*$', '', cleaned).strip()
+            result["reconstructed_memory"] = cleaned
+            return result
+
+        for i, match in enumerate(matches):
+            marker = match.group(0)
+            start = match.end()
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(cleaned)
+            content = cleaned[start:end].strip()
+
+            upper = marker.upper()
+            if "STEP 1" in upper:
+                result["step1"] = content
+            elif "STEP 2" in upper:
+                result["step2"] = content
+            elif "STEP 3" in upper:
+                result["step3"] = content
+            elif "STEP 4" in upper:
+                result["step4"] = content
+            elif "RECONSTRUCTED MEMORY" in upper:
+                content = re.sub(r'\n---+[\s\S]*$', '', content).strip()
+                result["reconstructed_memory"] = content
+
         return result
 
     def reconstruct_from_fight_end(self, fight_end_data: dict, model_output: Optional[str] = None) -> dict:
