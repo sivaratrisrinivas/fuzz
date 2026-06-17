@@ -1,17 +1,17 @@
 # Fuzz
 
-Fuzz is a free, private, open web game that helps anyone *feel* how AI rebuilds meaning from damaged data.
+A game where you write a secret message, watch it get scrambled by waves, fight to save it, and see a computer guess what you wrote using AI.
 
 ## How it works
 
-1. You write a private **Memory**. **Dissolving** turns it into **Fuzz** through **The Waves** at different **Fuzz Levels**.
-2. You fight back by **Rewriting** during the **Endless Fight**, leaving **Fresh Clues** at the right time for **Perfect Help**.
-3. When you stop, the **Smart Robot** performs **Reconstructing** using exactly **4 Cleaning Steps**, producing a **Reconstructed Memory** with a visible **Quiet Rewrite**. It is Creative Guessing, not an Exact Copy.
-4. You see your original side-by-side with the reconstructed version. **Play again** instantly wipes everything.
+1. **Write** a short memory in the text box.
+2. **Waves** come and slowly mess up your words (scrambling letters into dots). You can type to fix them while the waves keep coming.
+3. When you **let go**, your scrambled text gets sent to an AI robot across the internet. It looks at what's left and tries to rebuild your original message in 4 steps.
+4. You see **your original** next to the **robot's version** side by side. The robot's version is close but not exact — you can see where it used its imagination.
 
-Private by design — your full original text stays in your browser. The server receives only damaged data, does one AI call, then forgets everything.
+**Privacy**: Your original message stays in your browser. Only the scrambled version gets sent to the robot. After one guess, the server forgets everything.
 
-## Run locally
+## Play it
 
 ```bash
 cd box && bun install && bun dev          # http://localhost:3000
@@ -20,11 +20,10 @@ cd helper && pip install -r requirements.txt && python -m uvicorn src.thin_helpe
 
 Tests: `bun test` (box), `python -m pytest helper/tests` (helper).
 
-## Tech
+## What's inside
 
-- **Box**: Bun + TypeScript — live fight, visuals (sand/wave textures), Reveal Comparator, resilience UI
-- **Helper**: Python/FastAPI — prompt constructor, AI model caller, ephemeral coordinator
-- **AI**: Hugging Face InferenceClient → `Qwen/Qwen2.5-7B-Instruct` (overridable via `FUZZ_SMART_ROBOT_MODEL`)
-- **ADR**: Architecture decisions in `docs/adr/`
+- **Box** (Bun + TypeScript): the game screen — waves, typing, animations, side-by-side compare
+- **Helper** (Python/FastAPI): builds the prompt, calls the AI robot, forgets everything after
+- **AI robot**: `Qwen/Qwen2.5-7B-Instruct` on Hugging Face (swap model via `FUZZ_SMART_ROBOT_MODEL`)
 
-All slices #2–#10 (PRD #1) are implemented — 20 frontend + 13 Python tests pass. Glossary terms from `CONTEXT.md` are enforced throughout.
+20 frontend tests + 18 Python tests pass.

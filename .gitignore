@@ -71,5 +71,8 @@ tmp/
 *.log
 /tmp/fuzz-box-server.log
 
+# Generated visual assets (large files, not committed)
+box/assets/
+
 # Worktrees / local
 .worktrees/

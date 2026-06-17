@@ -22,7 +22,8 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; overflow: hidden; }
+    html { height: 100%; }
+    body { min-height: 100%; overflow-y: auto; overflow-x: auto; }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
@@ -46,12 +47,12 @@
 
     #environment {
       position: relative;
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      min-height: 100vh;
       background: var(--bg);
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
     }
 
     #organism-canvas {
@@ -61,23 +62,75 @@
       pointer-events: none;
     }
 
-    .organism-bg {
-      position: absolute;
-      inset: -20%;
-      background-image: url('/assets/organism-bg.jpg');
+    .bg-layer {
+      position: fixed;
+      inset: 0;
       background-size: cover;
       background-position: center;
-      opacity: 0.15;
+      opacity: 0;
       z-index: 0;
-      animation: drift 30s ease-in-out infinite;
+      animation: drift 60s ease-in-out infinite;
       pointer-events: none;
+      transition: opacity 1200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .bg-layer.visible { opacity: 0.15; }
+    .bg-layer.bg-cells {
+      background-image: url('/assets/organism-cells.jpg');
+      opacity: 0.06;
+      animation: drift 90s ease-in-out infinite;
       mix-blend-mode: screen;
     }
+    .bg-layer.bg-cells.visible { opacity: 0.08; }
+    .bg-layer.bg-depth {
+      background-image: url('/assets/hollow-earth.jpg');
+      opacity: 0;
+      mix-blend-mode: overlay;
+    }
+    .bg-layer.bg-depth.visible { opacity: 0.06; }
+    .bg-layer.bg-organism {
+      background-image: url('/assets/organism-bg.jpg');
+      animation: drift 30s ease-in-out infinite;
+      mix-blend-mode: screen;
+    }
+    .bg-layer.bg-organism.visible { opacity: 0.12; }
+    .bg-layer.bg-undisturbed {
+      background-image: url('/assets/undisturbed-sand.jpg');
+      mix-blend-mode: screen;
+    }
+    .bg-layer.bg-undisturbed.visible { opacity: 0.12; }
+    .bg-layer.bg-wave-sand {
+      background-image: url('/assets/wave-sand.jpg');
+      mix-blend-mode: screen;
+    }
+    .bg-layer.bg-wave-sand.visible { opacity: 0.14; }
+    .bg-layer.bg-settling {
+      background-image: url('/assets/settling-sand.jpg');
+      mix-blend-mode: screen;
+    }
+    .bg-layer.bg-settling.visible { opacity: 0.14; }
+    .bg-layer.bg-stones {
+      background-image: url('/assets/reveal-stones.jpg');
+      mix-blend-mode: screen;
+    }
+    .bg-layer.bg-stones.visible { opacity: 0.14; }
+
+    /* === LIVING WAVE VIDEO === */
+    #wave-video {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1500ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #wave-video.visible { opacity: 0.18; }
 
     /* === VIEWS — ONE ACTION PER SCREEN === */
     .view {
-      position: absolute;
-      inset: 0;
+      position: relative;
       display: none;
       flex-direction: column;
       align-items: center;
@@ -85,6 +138,8 @@
       z-index: 2;
       opacity: 0;
       transform: scale(0.97);
+      min-height: 100vh;
+      padding: 40px 20px;
       transition: opacity 900ms cubic-bezier(0.16, 1, 0.3, 1),
                   transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -151,7 +206,7 @@
     }
     .action.ghost:hover { background: var(--glass); color: var(--text); }
 
-    /* === MEMORY INPUT (view-memory) === */
+    /* === MEMORY INPUT (view-memory) — write in sand === */
     #view-memory textarea {
       width: min(88vw, 640px);
       min-height: 200px;
@@ -170,7 +225,7 @@
       resize: none;
       outline: none;
       caret-color: var(--accent);
-      transition: border-color 400ms;
+      transition: border-color 400ms, box-shadow 400ms;
       text-align: left;
     }
     #view-memory textarea::placeholder {
@@ -178,7 +233,13 @@
       font-weight: 300;
     }
     #view-memory textarea:focus {
-      border-color: rgba(255,255,255,0.2);
+      border-color: rgba(255,220,180,0.25);
+      box-shadow: 0 0 40px rgba(255,220,180,0.06), inset 0 0 40px rgba(255,220,180,0.03);
+    }
+    /* Sand-drawing glow on each keystroke */
+    #view-memory textarea.glow {
+      border-color: rgba(255,220,180,0.15);
+      box-shadow: 0 0 30px rgba(255,220,180,0.04);
     }
 
     #reset-notice {
@@ -201,6 +262,16 @@
       min-height: 280px;
       padding: 36px;
       position: relative;
+      overflow: hidden;
+      transition: transform 80ms;
+    }
+    #view-fight .fight-surface.shake {
+      animation: surfaceShake 120ms ease-out;
+    }
+    @keyframes surfaceShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
     }
     #fight-display {
       font-family: inherit;
@@ -211,8 +282,66 @@
       white-space: pre-wrap;
       word-break: break-word;
       min-height: 180px;
+      position: relative;
+      z-index: 1;
     }
-    #fight-display .fuzzed { color: var(--text-ghost); }
+    #fight-display .fuzzed {
+      color: var(--text-ghost);
+      transition: color 400ms;
+      position: relative;
+    }
+    #fight-display .fuzzed.dissolving {
+      animation: charDissolve 700ms ease-out forwards;
+    }
+    @keyframes charDissolve {
+      0% { color: rgba(255,255,255,0.9); text-shadow: 0 0 8px rgba(255,255,255,0.6); }
+      30% { color: rgba(255,200,150,0.7); text-shadow: 0 0 16px rgba(255,200,150,0.4); }
+      100% { color: var(--text-ghost); text-shadow: none; }
+    }
+    /* Wave sweep overlay */
+    .wave-sweep {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      background: linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(255,255,255,0.03) 20%,
+        rgba(255,255,255,0.08) 40%,
+        rgba(180,210,255,0.05) 50%,
+        rgba(255,255,255,0.08) 60%,
+        rgba(255,255,255,0.03) 80%,
+        transparent 100%
+      );
+      transition: opacity 100ms;
+    }
+    .wave-sweep.active {
+      opacity: 1;
+      animation: waveSweep 500ms ease-out forwards;
+    }
+    @keyframes waveSweep {
+      0% { transform: translateX(-100%); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateX(100%); opacity: 0; }
+    }
+    /* Foam bubbles on wave hit */
+    .foam-particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 3;
+      animation: foamRise 800ms ease-out forwards;
+    }
+    @keyframes foamRise {
+      0% { opacity: 0.6; transform: translate(0, 0) scale(1); }
+      100% { opacity: 0; transform: translate(var(--foam-dx), var(--foam-dy)) scale(0); }
+    }
     #fight-input {
       position: absolute;
       inset: 36px;
@@ -232,21 +361,25 @@
     }
     .wave-line {
       width: min(80vw, 600px);
-      height: 2px;
+      height: 3px;
       background: var(--glass-border);
-      border-radius: 1px;
+      border-radius: 2px;
       margin-top: 20px;
       position: relative;
       overflow: hidden;
+      transition: box-shadow 300ms;
     }
-    .wave-line::after {
-      content: '';
+    .wave-line .wave-line-fill {
       position: absolute;
       left: 0; top: 0; bottom: 0;
       width: 0%;
-      background: rgba(255,255,255,0.5);
-      border-radius: 1px;
+      background: linear-gradient(to right, rgba(255,255,255,0.2), rgba(200,220,255,0.6));
+      border-radius: 2px;
       transition: width 400ms ease;
+    }
+    .wave-line.pulse {
+      box-shadow: 0 0 20px rgba(200,220,255,0.3), 0 0 60px rgba(200,220,255,0.1);
+      transition: box-shadow 80ms;
     }
     .fight-controls {
       display: flex;
@@ -259,6 +392,10 @@
       letter-spacing: 0.15em;
       color: var(--text-ghost);
       font-weight: 400;
+      transition: color 300ms;
+    }
+    #fuzz-level-display.pulse {
+      color: rgba(200,220,255,0.6);
     }
 
     /* === RECONSTRUCTING VIEW === */
@@ -275,12 +412,29 @@
       opacity: 0;
       transform: translateY(16px);
       transition: all 700ms cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
     }
     .cleaning-step.visible {
       opacity: 1;
       transform: translateY(0);
     }
     .cleaning-step.opacity-60 { opacity: 0.25; }
+    .cleaning-step .step-settle {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(200,220,240,0.06) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 1000ms;
+      pointer-events: none;
+    }
+    .cleaning-step.visible .step-settle {
+      animation: settleGlow 1200ms ease-out forwards;
+    }
+    @keyframes settleGlow {
+      0% { opacity: 0.6; transform: scale(0.8); }
+      100% { opacity: 0; transform: scale(1.5); }
+    }
     .cleaning-step .step-label {
       font-size: 10px;
       font-weight: 500;
@@ -359,7 +513,6 @@
       text-align: left;
       transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .reveal-card:hover { transform: translateY(-3px); }
     #feeling-lesson-msg {
       max-width: 500px;
       margin: 36px auto 0;
@@ -374,6 +527,18 @@
       font-weight: 400;
       text-shadow: 0 0 20px rgba(255,255,255,0.3);
       position: relative;
+      animation: quietGlow 3s ease-in-out infinite;
+    }
+    @keyframes quietGlow {
+      0%, 100% { text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+      50% { text-shadow: 0 0 30px rgba(255,255,255,0.4), 0 0 60px rgba(255,255,255,0.1); }
+    }
+    .reveal-card {
+      transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 500ms;
+    }
+    .reveal-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.3);
     }
 
     #end-data-panel { display: none; }
@@ -415,7 +580,14 @@
        Data contract: fight-end data contract {final_fuzz, fresh_clues} only. -->
 
   <div id="environment">
-    <div class="organism-bg"></div>
+    <div class="bg-layer bg-cells visible"></div>
+    <div class="bg-layer bg-depth visible"></div>
+    <div class="bg-layer bg-organism visible" id="bg-primary"></div>
+    <div class="bg-layer bg-undisturbed" id="bg-memory"></div>
+    <div class="bg-layer bg-wave-sand" id="bg-fight"></div>
+    <div class="bg-layer bg-settling" id="bg-reconstructing"></div>
+    <div class="bg-layer bg-stones" id="bg-reveal"></div>
+    <video id="wave-video" src="/assets/wave-living.mp4" muted loop playsinline preload="auto"></video>
     <canvas id="organism-canvas"></canvas>
 
     <!-- ====== VIEW 1: MEMORY ENTRY — One action: Begin ====== -->
@@ -432,11 +604,15 @@
     <!-- ====== VIEW 2: THE ENDLESS FIGHT — One action: Release ====== -->
     <div id="view-fight" class="view">
       <div class="view-mark">the waves</div>
-      <div class="fight-surface glass">
+      <div class="fight-surface glass" id="fight-surface">
+        <div class="wave-sweep" id="wave-sweep"></div>
+        <div id="foam-container"></div>
         <div id="fight-display"></div>
         <textarea id="fight-input"></textarea>
       </div>
-      <div class="wave-line" id="wave-line"></div>
+      <div class="wave-line" id="wave-line">
+        <div class="wave-line-fill" id="wave-line-fill"></div>
+      </div>
       <div id="fuzz-level-display"></div>
       <div class="fight-controls">
         <button class="action" id="release-btn" disabled>Release</button>
@@ -453,18 +629,22 @@
 
       <div id="progressive-steps">
         <div id="step-1" class="cleaning-step opacity-60">
+          <div class="step-settle"></div>
           <div class="step-label">Cleaning Step 1</div>
           <div class="step-content"></div>
         </div>
         <div id="step-2" class="cleaning-step opacity-60">
+          <div class="step-settle"></div>
           <div class="step-label">Cleaning Step 2</div>
           <div class="step-content"></div>
         </div>
         <div id="step-3" class="cleaning-step opacity-60">
+          <div class="step-settle"></div>
           <div class="step-label">Cleaning Step 3</div>
           <div class="step-content"></div>
         </div>
         <div id="step-4" class="cleaning-step opacity-60">
+          <div class="step-settle"></div>
           <div class="step-label">Cleaning Step 4</div>
           <div class="step-content"></div>
         </div>
@@ -736,6 +916,32 @@
       else if (name === 'reconstructing') orgPhase = 'settle';
       else if (name === 'reveal') orgPhase = 'reveal';
       else orgPhase = 'calm';
+
+      // Switch themed background layers per view
+      const bgPrimary = document.getElementById('bg-primary');
+      const bgMemory = document.getElementById('bg-memory');
+      const bgFight = document.getElementById('bg-fight');
+      const bgRecon = document.getElementById('bg-reconstructing');
+      const bgReveal = document.getElementById('bg-reveal');
+      const waveVideo = document.getElementById('wave-video');
+      [bgMemory, bgFight, bgRecon, bgReveal].forEach(el => { if (el) el.classList.remove('visible'); });
+      if (name === 'memory' && bgMemory) bgMemory.classList.add('visible');
+      else if (name === 'fight' && bgFight) bgFight.classList.add('visible');
+      else if (name === 'reconstructing' && bgRecon) bgRecon.classList.add('visible');
+      else if (name === 'reveal' && bgReveal) bgReveal.classList.add('visible');
+      if (bgPrimary) {
+        bgPrimary.style.opacity = (name === 'fight' || name === 'reveal') ? '0.06' : '0.12';
+      }
+      // Video: play on fight view, pause otherwise
+      if (waveVideo) {
+        if (name === 'fight') {
+          waveVideo.classList.add('visible');
+          waveVideo.play().catch(() => {});
+        } else {
+          waveVideo.classList.remove('visible');
+          waveVideo.pause();
+        }
+      }
     }
 
     function fadeTransition(cb) {
@@ -768,6 +974,13 @@
 
       showView('memory');
 
+      // Sand glow on keystroke
+      memTa.addEventListener('input', () => {
+        memTa.classList.remove('glow');
+        void memTa.offsetWidth;
+        memTa.classList.add('glow');
+      });
+
       document.getElementById('begin-btn').onclick = () => {
         const mem = (memTa.value || '').trim() || OAK_FOR_DEMO;
         if (notice) notice.style.display = 'none';
@@ -793,24 +1006,72 @@
       input.value = currentSim.getCurrentFuzz();
       releaseBtn.disabled = false;
 
-      function renderFuzz() {
+      function renderFuzz(newlyFuzzed) {
         if (!currentSim) return;
         const fuzz = currentSim.getCurrentFuzz();
         const level = currentSim.getCurrentFuzzLevel();
-        // Render with fuzzed characters dimmed
         let html = '';
         for (let i = 0; i < fuzz.length; i++) {
-          if (fuzz[i] === '*') html += '<span class="fuzzed">·</span>';
-          else html += fuzz[i];
+          if (fuzz[i] === '*') {
+            const isNew = newlyFuzzed && newlyFuzzed.includes(i);
+            html += `<span class="fuzzed${isNew ? ' dissolving' : ''}">·</span>`;
+          } else {
+            html += fuzz[i];
+          }
         }
         display.innerHTML = html;
         if (levelEl) levelEl.textContent = `FUZZ LEVEL ${level}`;
-        // Wave line progress
-        if (waveLine) {
+        const fill = document.getElementById('wave-line-fill');
+        if (fill) {
           const pct = Math.min(100, (level / 13) * 100);
-          waveLine.style.setProperty('--wave-pct', pct + '%');
-          const after = waveLine.querySelector('::after') || waveLine;
-          waveLine.style.background = `linear-gradient(to right, rgba(255,255,255,0.5) ${pct}%, var(--glass-border) ${pct}%)`;
+          fill.style.width = pct + '%';
+        }
+      }
+
+      function triggerWaveSweep() {
+        const sweep = document.getElementById('wave-sweep');
+        const surface = document.getElementById('fight-surface');
+        const wl = document.getElementById('wave-line');
+        if (sweep) {
+          sweep.classList.remove('active');
+          void sweep.offsetWidth;
+          sweep.classList.add('active');
+        }
+        if (surface) {
+          surface.classList.remove('shake');
+          void surface.offsetWidth;
+          surface.classList.add('shake');
+        }
+        if (wl) {
+          wl.classList.remove('pulse');
+          void wl.offsetWidth;
+          wl.classList.add('pulse');
+          setTimeout(() => wl.classList.remove('pulse'), 300);
+        }
+        if (levelEl) {
+          levelEl.classList.remove('pulse');
+          void levelEl.offsetWidth;
+          levelEl.classList.add('pulse');
+          setTimeout(() => levelEl.classList.remove('pulse'), 300);
+        }
+      }
+
+      function spawnFoam(count) {
+        const container = document.getElementById('foam-container');
+        if (!container) return;
+        for (let i = 0; i < count; i++) {
+          const foam = document.createElement('div');
+          foam.className = 'foam-particle';
+          const dx = (Math.random() - 0.5) * 120;
+          const dy = -20 - Math.random() * 60;
+          foam.style.left = (30 + Math.random() * 60) + '%';
+          foam.style.top = (20 + Math.random() * 60) + '%';
+          foam.style.setProperty('--foam-dx', dx + 'px');
+          foam.style.setProperty('--foam-dy', dy + 'px');
+          foam.style.width = (2 + Math.random() * 4) + 'px';
+          foam.style.height = foam.style.width;
+          container.appendChild(foam);
+          setTimeout(() => foam.remove(), 800);
         }
       }
 
@@ -826,9 +1087,17 @@
       stopWaves();
       waveTimer = setInterval(() => {
         if (!currentSim || !fightActive) return;
+        const before = currentSim.getCurrentFuzz();
         currentSim.applyWave();
-        input.value = currentSim.getCurrentFuzz();
-        renderFuzz();
+        const after = currentSim.getCurrentFuzz();
+        const newlyFuzzed = [];
+        for (let i = 0; i < before.length; i++) {
+          if (before[i] !== '*' && after[i] === '*') newlyFuzzed.push(i);
+        }
+        input.value = after;
+        renderFuzz(newlyFuzzed);
+        triggerWaveSweep();
+        if (newlyFuzzed.length > 0) spawnFoam(newlyFuzzed.length * 2);
       }, 600 + Math.random() * 120);
 
       releaseBtn.onclick = () => stopFight();

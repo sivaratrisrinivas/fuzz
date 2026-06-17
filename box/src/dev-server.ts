@@ -56,15 +56,21 @@ const server = Bun.serve({
     // These are non-negotiable visual materials that make the app feel like a tactile organism in a real environment.
     if (pathname.startsWith('/assets/')) {
       try {
-        const file = Bun.file(`./assets${pathname}`);
+        const relativePath = pathname.replace(/^\/assets\//, '');
+        const file = Bun.file(`./assets/${relativePath}`);
         const exists = await file.exists();
         if (exists) {
           const contentType = pathname.endsWith('.mp4') ? 'video/mp4' :
                              pathname.endsWith('.jpg') || pathname.endsWith('.jpeg') ? 'image/jpeg' :
                              'application/octet-stream';
+          console.log(`[serve] ${pathname} -> ${contentType}`);
           return new Response(file, { headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' } });
+        } else {
+          console.log(`[serve] MISSING: ${pathname}`);
         }
-      } catch (e) { /* fall through to 404 */ }
+      } catch (e) {
+        console.log(`[serve] ERROR: ${pathname} - ${e}`);
+      }
     }
 
     // Future: static assets or API stubs for the box (client-only for now).
