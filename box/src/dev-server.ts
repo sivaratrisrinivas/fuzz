@@ -52,6 +52,21 @@ const server = Bun.serve({
       return Response.json(data, { status: helperResp.status });
     }
 
+    // Serve generated physical assets (Jony Ive-inspired sand, waves, stones, living animations) for the redesigned living UI.
+    // These are non-negotiable visual materials that make the app feel like a tactile organism in a real environment.
+    if (pathname.startsWith('/assets/')) {
+      try {
+        const file = Bun.file(`./assets${pathname}`);
+        const exists = await file.exists();
+        if (exists) {
+          const contentType = pathname.endsWith('.mp4') ? 'video/mp4' :
+                             pathname.endsWith('.jpg') || pathname.endsWith('.jpeg') ? 'image/jpeg' :
+                             'application/octet-stream';
+          return new Response(file, { headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' } });
+        }
+      } catch (e) { /* fall through to 404 */ }
+    }
+
     // Future: static assets or API stubs for the box (client-only for now).
     if (pathname === "/health") {
       return Response.json({
@@ -62,7 +77,7 @@ const server = Bun.serve({
     }
 
     return new Response(
-      "Fuzz live fight box - see index.html. Per issue #4: the deep Fuzz Simulator + playable Endless Fight (Dissolving, Rewriting, Fresh Clues for Perfect Help) are now live in the browser (client only). Other views remain progressive placeholders.",
+      "Fuzz live fight box - see index.html. The living physical interface (one action per place, sand as organism, Jony Ive craft).",
       { status: 404, headers: { "Content-Type": "text/plain" } }
     );
   },

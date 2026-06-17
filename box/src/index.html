@@ -2,180 +2,539 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fuzz — Feeling Science • Real Experience • Word Lesson</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="description" content="Fuzz — feel how AI rebuilds meaning from damaged data. The Feeling Science through the Word Lesson and the Real Experience of the Sand Drawing." />
+  <title>Fuzz</title>
   <style>
-    body { font-family: ui-sans-serif, system-ui, sans-serif; }
-    .glossary-term { font-weight: 600; }
-    .view { display: none; }
-    .view.active { display: block; }
-    .fuzz-example { font-family: ui-monospace, monospace; background: #111; color: #aaa; padding: 1rem; border-radius: 0.5rem; white-space: pre-wrap; line-height: 1.4; }
-    .sand { background: linear-gradient(#f5e8c7, #e8d5a3); }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500&display=swap');
+
+    :root {
+      --bg: #050505;
+      --glass: rgba(255,255,255,0.04);
+      --glass-border: rgba(255,255,255,0.08);
+      --glass-hover: rgba(255,255,255,0.07);
+      --text: rgba(255,255,255,0.88);
+      --text-dim: rgba(255,255,255,0.4);
+      --text-ghost: rgba(255,255,255,0.18);
+      --accent: #fff;
+      --radius: 28px;
+      --radius-sm: 16px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* === THE LIVING ENVIRONMENT === */
+    @keyframes breathe {
+      0%, 100% { background-position: 0% 50%; opacity: 0.3; }
+      50% { background-position: 100% 50%; opacity: 0.5; }
+    }
+    @keyframes drift {
+      0% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(2%, -1%) scale(1.01); }
+      66% { transform: translate(-1%, 2%) scale(0.99); }
+      100% { transform: translate(0, 0) scale(1); }
+    }
+
+    #environment {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #organism-canvas {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .organism-bg {
+      position: absolute;
+      inset: -20%;
+      background-image: url('/assets/organism-bg.jpg');
+      background-size: cover;
+      background-position: center;
+      opacity: 0.15;
+      z-index: 0;
+      animation: drift 30s ease-in-out infinite;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+
+    /* === VIEWS — ONE ACTION PER SCREEN === */
+    .view {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      opacity: 0;
+      transform: scale(0.97);
+      transition: opacity 900ms cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 900ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .view.active {
+      display: flex;
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* === TYPOGRAPHY === */
+    .view-mark {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--text-ghost);
+      margin-bottom: 40px;
+      user-select: none;
+    }
+
+    /* === GLASS SURFACE === */
+    .glass {
+      background: var(--glass);
+      backdrop-filter: blur(60px) saturate(1.2);
+      -webkit-backdrop-filter: blur(60px) saturate(1.2);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+    }
+
+    /* === THE SINGULAR ACTION BUTTON === */
+    .action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 40px;
+      padding: 16px 44px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: #000;
+      background: rgba(255,255,255,0.9);
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      user-select: none;
+      transition: all 500ms cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    }
+    .action:hover {
+      background: #fff;
+      transform: translateY(-1px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.3), 0 0 60px rgba(255,255,255,0.08);
+    }
+    .action:active { transform: translateY(1px) scale(0.98); }
+    .action:disabled { opacity: 0.15; pointer-events: none; }
+    .action.ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--glass-border);
+      box-shadow: none;
+      padding: 12px 28px;
+      font-size: 12px;
+    }
+    .action.ghost:hover { background: var(--glass); color: var(--text); }
+
+    /* === MEMORY INPUT (view-memory) === */
+    #view-memory textarea {
+      width: min(88vw, 640px);
+      min-height: 200px;
+      padding: 32px;
+      font-family: inherit;
+      font-size: 20px;
+      font-weight: 200;
+      line-height: 1.6;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      background: var(--glass);
+      backdrop-filter: blur(60px);
+      -webkit-backdrop-filter: blur(60px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      resize: none;
+      outline: none;
+      caret-color: var(--accent);
+      transition: border-color 400ms;
+      text-align: left;
+    }
+    #view-memory textarea::placeholder {
+      color: var(--text-ghost);
+      font-weight: 300;
+    }
+    #view-memory textarea:focus {
+      border-color: rgba(255,255,255,0.2);
+    }
+
+    #reset-notice {
+      display: none;
+      max-width: 440px;
+      padding: 14px 20px;
+      margin-bottom: 20px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-dim);
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      text-align: center;
+    }
+
+    /* === FIGHT VIEW === */
+    #view-fight .fight-surface {
+      width: min(92vw, 720px);
+      min-height: 280px;
+      padding: 36px;
+      position: relative;
+    }
+    #fight-display {
+      font-family: inherit;
+      font-size: 19px;
+      font-weight: 200;
+      line-height: 1.65;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 180px;
+    }
+    #fight-display .fuzzed { color: var(--text-ghost); }
+    #fight-input {
+      position: absolute;
+      inset: 36px;
+      width: calc(100% - 72px);
+      height: calc(100% - 72px);
+      font-family: inherit;
+      font-size: 19px;
+      font-weight: 200;
+      line-height: 1.65;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      resize: none;
+      outline: none;
+      caret-color: var(--accent);
+      z-index: 2;
+    }
+    .wave-line {
+      width: min(80vw, 600px);
+      height: 2px;
+      background: var(--glass-border);
+      border-radius: 1px;
+      margin-top: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .wave-line::after {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 0%;
+      background: rgba(255,255,255,0.5);
+      border-radius: 1px;
+      transition: width 400ms ease;
+    }
+    .fight-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 24px;
+    }
+    #fuzz-level-display {
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--text-ghost);
+      font-weight: 400;
+    }
+
+    /* === RECONSTRUCTING VIEW === */
+    #progressive-steps {
+      width: min(84vw, 560px);
+    }
+    .cleaning-step {
+      padding: 24px 28px;
+      margin-bottom: 16px;
+      border-radius: var(--radius-sm);
+      background: var(--glass);
+      backdrop-filter: blur(40px);
+      border: 1px solid var(--glass-border);
+      opacity: 0;
+      transform: translateY(16px);
+      transition: all 700ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .cleaning-step.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .cleaning-step.opacity-60 { opacity: 0.25; }
+    .cleaning-step .step-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      color: var(--text-ghost);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    .cleaning-step .step-content {
+      font-size: 16px;
+      font-weight: 200;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    #reconstruct-status {
+      font-size: 12px;
+      color: var(--text-ghost);
+      letter-spacing: 0.1em;
+      margin-top: 20px;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    /* === RESILIENCE PANEL === */
+    #resilience-panel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-top: 24px;
+      padding: 24px;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-sm);
+      max-width: 400px;
+      text-align: center;
+    }
+    #resilience-panel .resilience-msg {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+    #resilience-panel .resilience-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* === REVEAL VIEW === */
+    .reveal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      width: min(92vw, 960px);
+    }
+    @media (max-width: 700px) {
+      .reveal-grid { grid-template-columns: 1fr; }
+    }
+    .reveal-column { text-align: center; }
+    .reveal-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-ghost);
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    .reveal-card {
+      padding: 32px;
+      min-height: 200px;
+      font-size: 16px;
+      font-weight: 200;
+      line-height: 1.65;
+      text-align: left;
+      transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-card:hover { transform: translateY(-3px); }
+    #feeling-lesson-msg {
+      max-width: 500px;
+      margin: 36px auto 0;
+      font-size: 13px;
+      font-weight: 300;
+      line-height: 1.7;
+      color: var(--text-dim);
+      text-align: center;
+    }
+    .quiet-rewrite {
+      color: #fff;
+      font-weight: 400;
+      text-shadow: 0 0 20px rgba(255,255,255,0.3);
+      position: relative;
+    }
+
+    #end-data-panel { display: none; }
+
+    /* === TRANSITION OVERLAY === */
+    #transition-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 50;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1000ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #transition-overlay.active { opacity: 1; }
+
+    /* === BREATHING PULSE ON ACTIVE BUTTON === */
+    @keyframes subtle-pulse {
+      0%, 100% { box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+      50% { box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 40px rgba(255,255,255,0.06); }
+    }
+    .action:not(:disabled) { animation: subtle-pulse 4s ease-in-out infinite; }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-200">
-  <div class="max-w-4xl mx-auto p-6">
-    <!-- Header -->
-    <header class="mb-8">
-      <div class="flex items-center gap-3">
-        <div class="text-4xl">🏜️</div>
-        <div>
-          <h1 class="text-4xl font-bold tracking-tight">Fuzz</h1>
-          <p class="text-emerald-400 text-sm">The Feeling Science • The Word Lesson • The Real Experience</p>
-        </div>
-      </div>
-      <p class="mt-3 max-w-prose text-zinc-400">
-        Write a <span class="glossary-term">Memory</span>. Watch <span class="glossary-term">Dissolving</span> slowly turn it into <span class="glossary-term">Fuzz</span> through <span class="glossary-term">The Waves</span> at different <span class="glossary-term">Fuzz Levels</span>. Keep <span class="glossary-term">Rewriting</span> during the <span class="glossary-term">Endless Fight</span> to leave good <span class="glossary-term">Clues</span> and especially <span class="glossary-term">Fresh Clues</span> at the exact right time for <span class="glossary-term">Perfect Help</span>. At the end the <span class="glossary-term">Smart Robot</span> performs <span class="glossary-term">Reconstructing</span> using its <span class="glossary-term">Training</span> and exactly <span class="glossary-term">4 Cleaning Steps</span>, producing a <span class="glossary-term">Reconstructed Memory</span> that shows a visible <span class="glossary-term">Quiet Rewrite</span> (Creative Guessing, not an <span class="glossary-term">Exact Copy</span>). You feel the <span class="glossary-term">Real Experience</span> and learn the <span class="glossary-term">Feeling Lesson</span>. It all feels like the <span class="glossary-term">Sand Drawing</span>.
-      </p>
-      <div class="mt-2 text-[10px] text-zinc-500">Issue #4 complete: deep Fuzz Simulator + playable live Endless Fight (client-side Dissolving, Rewriting, Fresh Clues for Perfect Help) now real and demoable. Issue #6: thin helper one Smart Robot call + ephemeral wired; box stop sends contract and receives result (via proxy). Issue #7: progressive 4 Cleaning Steps waiting UX during Reconstructing (auto on result, client pauses). Issue #8 complete: side-by-side reveal with Quiet Rewrite highlights via Reveal Comparator + short Feeling Lesson message (local original + result.reconstructed_memory, browser port, dynamic). Issue #9 complete: Play again instant full clear and round reset flows (client-side; refresh during fight handling) — resetAll clears all pieces + empty Memory input; live-fight refresh shows gentle msg + forces fresh start (sessionStorage flag, no private data, glossary only). Issue #10 complete (TDD 3 tracers + E2E audit): resilience paths for Smart Robot slow/fail ("Wait longer" / "Try again reusing the exact same fight-end data contract" / "Start a new Memory" via lastFightEndData + 30s Abort timeout + tryAgainReconstruct + waitLonger), full E2E player journey verification + privacy/cost/glossary audit (builds on #6-9; PRD #1 story17 + ACs + handoff). 20/20 tests. References: PRD #1, issues #4-10, /tmp/handoff-fuzz-issue9-main-integration.md, ADR-0001, CONTEXT.md. Glossary strict everywhere.</div>
-    </header>
+<body>
 
-    <!-- View switcher (demo only — shows the four placeholder views) -->
-    <div class="flex flex-wrap gap-2 mb-4">
-      <button onclick="showView('memory')" class="px-4 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 active:bg-emerald-900 text-sm">1. Enter Memory (start)</button>
-      <button onclick="showView('fight')" class="px-4 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 active:bg-emerald-900 text-sm">2. Endless Fight (The Waves)</button>
-      <button onclick="showView('reconstructing')" class="px-4 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 active:bg-emerald-900 text-sm">3. Reconstructing (4 Cleaning Steps)</button>
-      <button onclick="showView('reveal')" class="px-4 py-1.5 rounded bg-zinc-800 hover:bg-zinc-700 active:bg-emerald-900 text-sm">4. Reveal (Quiet Rewrite)</button>
+  <!-- Fuzz — The Feeling Science. Sand Drawing metaphor. Word Lesson. Real Experience.
+       Redesign: Jony Ive energy. One action per screen. Living organism. 11-star UX.
+       Core logic: Memory, Fuzz, Dissolving, Rewriting, Reconstructing, Clues, Fresh Clues,
+       Perfect Help, Endless Fight, 4 Cleaning Steps, Quiet Rewrite, Best Guess, Creative Guessing,
+       Smart Robot, Training, Reconstructed Memory, Feeling Lesson, Exact Copy, Fuzz Levels,
+       Fixing Science, Watch and Fight Way, Word Lesson, Feeling Way, Feeling Science.
+       The original Memory is client-only (local only, never sent, private). The helper immediately forgets.
+       Privacy: one Smart Robot call, ephemeral forget, no auth, https, dedicated nvidia-l4, open access.
+       Issues: issue #4, issue #6, issue #7, issue #8, issue #9, issue #10 (all complete).
+       Reveal Comparator identifies Quiet Rewrite via Creative Guessing (not Exact Copy).
+       Data contract: fight-end data contract {final_fuzz, fresh_clues} only. -->
+
+  <div id="environment">
+    <div class="organism-bg"></div>
+    <canvas id="organism-canvas"></canvas>
+
+    <!-- ====== VIEW 1: MEMORY ENTRY — One action: Begin ====== -->
+    <div id="view-memory" class="view active">
+      <div id="reset-notice">
+        You refreshed during the Endless Fight. Your prior Memory was private and is gone.
+        Type a completely new Memory below.
+      </div>
+      <div class="view-mark">fuzz</div>
+      <textarea placeholder="Write a Memory…"></textarea>
+      <button class="action" id="begin-btn">Begin the Endless Fight</button>
     </div>
 
-    <!-- 1. Memory entry view -->
-    <div id="view-memory" class="view active border border-zinc-800 rounded-xl p-6 bg-zinc-900">
-      <h2 class="font-semibold text-xl mb-2">Enter your <span class="glossary-term">Memory</span></h2>
-      <p class="text-sm text-zinc-400 mb-3">This is the private text that will be the subject of the <span class="glossary-term">Sand Drawing</span>. The <span class="glossary-term">live fight box</span> keeps the original <span class="glossary-term">Memory</span> locally only (for accurate <span class="glossary-term">Dissolving</span> simulation and <span class="glossary-term">Fresh Clues</span> timing). The <span class="glossary-term">thin helper</span> and <span class="glossary-term">Smart Robot</span> never see it.</p>
-      <!-- #9: transient gentle notice only shown on boot after refresh-during-live-Endless-Fight (AC4, PRD18). Hidden default; script shows + populates with glossary + forces empty fresh Memory input. Client only, no private data. -->
-      <div id="reset-notice" style="display:none" class="mb-3 p-3 rounded border border-amber-800 bg-amber-950/40 text-sm text-amber-300"></div>
-      <textarea class="w-full h-32 p-3 bg-black border border-zinc-700 rounded font-mono text-sm" placeholder="Type your private Memory here... (example: a short story or description you want the Smart Robot to reconstruct from Fuzz)"></textarea>
-      <div class="mt-3">
-        <button onclick="showView('fight')" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 rounded font-medium">Begin the Endless Fight →</button>
+    <!-- ====== VIEW 2: THE ENDLESS FIGHT — One action: Release ====== -->
+    <div id="view-fight" class="view">
+      <div class="view-mark">the waves</div>
+      <div class="fight-surface glass">
+        <div id="fight-display"></div>
+        <textarea id="fight-input"></textarea>
       </div>
-    </div>
-
-    <!-- 2. Endless Fight view (LIVE per issue #4) -->
-    <div id="view-fight" class="view border border-zinc-800 rounded-xl p-6 bg-zinc-900">
-      <h2 class="font-semibold text-xl mb-2">The <span class="glossary-term">Endless Fight</span></h2>
-      <p class="text-sm text-zinc-400 mb-4"><span class="glossary-term">Dissolving</span> via <span class="glossary-term">The Waves</span> at rising <span class="glossary-term">Fuzz Levels</span>. Keep <span class="glossary-term">Rewriting</span> in the box below to leave <span class="glossary-term">Clues</span> and especially <span class="glossary-term">Fresh Clues</span> at the exact right <span class="glossary-term">Fuzz Level</span> for <span class="glossary-term">Perfect Help</span>. The <span class="glossary-term">live fight box</span> keeps your original <span class="glossary-term">Memory</span> local only.</p>
-
-      <div class="mb-2 flex items-center gap-3">
-        <div class="text-sm font-medium"><span class="glossary-term">Fuzz Level</span>: <span id="fuzz-level" class="font-mono">0 / 12</span></div>
-        <div class="flex-1 h-2 bg-zinc-800 rounded overflow-hidden"><div id="fuzz-bar" class="h-2 w-0 bg-amber-400 transition-all"></div></div>
-      </div>
-
-      <div class="mb-2 text-xs uppercase tracking-widest text-amber-400">Current <span class="glossary-term">Fuzz</span> (edit to <span class="glossary-term">Rewrite</span>)</div>
-      <textarea id="fight-ta" class="w-full h-40 p-3 bg-black border border-zinc-700 rounded font-mono text-sm" placeholder="Your Memory appears here. The Waves will start dissolving it. Type to rewrite and leave Fresh Clues..."></textarea>
-
-      <div class="mt-4">
-        <div class="text-xs uppercase tracking-widest text-emerald-400 mb-1">Fresh Clues captured (for <span class="glossary-term">Perfect Help</span>)</div>
-        <ul id="clues-list" class="text-sm bg-zinc-950 border border-zinc-800 rounded p-2 min-h-[3rem] text-zinc-300"></ul>
-      </div>
-
-      <div class="mt-4 flex gap-3 flex-wrap">
-        <button id="start-waves-btn" class="px-5 py-2 bg-amber-600 hover:bg-amber-500 rounded font-medium">Start The Waves (begin Endless Fight)</button>
-        <button id="stop-fight-btn" class="px-5 py-2 bg-sky-600 hover:bg-sky-500 rounded font-medium" disabled>Stop the Endless Fight → produce data contract</button>
-        <button onclick="showView('memory')" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-sm">Back to entry</button>
-      </div>
-
-      <div id="end-data-panel" class="hidden mt-4 p-4 border border-zinc-700 bg-black rounded">
-        <div class="text-xs uppercase mb-1 text-zinc-400">Fight ended — data contract (what the box sends; original <span class="glossary-term">Memory</span> stayed here)</div>
-        <pre id="end-json" class="text-[11px] overflow-auto max-h-48 p-2 bg-zinc-900 rounded"></pre>
-        <div class="text-[10px] text-emerald-400 mt-1">This + the captured <span class="glossary-term">Fresh Clues</span> at exact <span class="glossary-term">Fuzz Levels</span> gives the <span class="glossary-term">Smart Robot</span> <span class="glossary-term">Perfect Help</span>. Sent to thin helper for one Smart Robot call (issue #6). Auto-switches to progressive 4 Cleaning Steps view (issue #7) with client pauses. Result ephemeral on helper.</div>
-      </div>
-
-      <p class="mt-3 text-[10px] text-zinc-500">Live client-side <span class="glossary-term">Dissolving</span> + <span class="glossary-term">Rewriting</span> + <span class="glossary-term">Fresh Clues</span> timing (issue #4). Timer applies <span class="glossary-term">The Waves</span>. Edit live to fight back. All in browser (original local only).</p>
-    </div>
-
-    <!-- 3. Reconstructing / waiting view (4 Cleaning Steps) -- issue #7 progressive UX layer on #6 result -->
-    <div id="view-reconstructing" class="view border border-zinc-800 rounded-xl p-6 bg-zinc-900">
-      <h2 class="font-semibold text-xl mb-2">Reconstructing — the <span class="glossary-term">Smart Robot</span> performs the <span class="glossary-term">4 Cleaning Steps</span></h2>
-      <p id="reconstruct-status" class="text-sm text-emerald-300 mb-4">The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the <span class="glossary-term">Fuzz</span> using the <span class="glossary-term">Fresh Clues</span>. Watch the slow clean-up (Sand Drawing metaphor) as steps appear progressively.</p>
-
-      <!-- progressive-steps container for B3/B4 dynamic reveal of actual result.steps from #6 one-call -->
-      <div id="progressive-steps" class="space-y-4">
-        <div id="step-1" class="p-4 bg-zinc-950 border border-zinc-800 rounded">
-          <div class="text-emerald-400 text-sm font-medium mb-1">Step 1 of 4 — in progress</div>
-          <div class="text-xs">Start with the strongest <span class="glossary-term">Fresh Clues</span>. Put back the clearest words and short phrases first, in their right spots.</div>
-          <div class="step-content mt-2 text-sm font-mono whitespace-pre-wrap"></div>
-        </div>
-        <div id="step-2" class="p-4 bg-zinc-950 border border-zinc-800 rounded opacity-60">
-          <div class="text-emerald-400 text-sm font-medium mb-1">Step 2 of 4</div>
-          <div class="text-xs">Look at the <span class="glossary-term">Clues</span> still left in the <span class="glossary-term">Fuzz</span>. Fill in more letters and words around the ones you already fixed.</div>
-          <div class="step-content mt-2 text-sm font-mono whitespace-pre-wrap"></div>
-        </div>
-        <div id="step-3" class="p-4 bg-zinc-950 border border-zinc-800 rounded opacity-60">
-          <div class="text-emerald-400 text-sm font-medium mb-1">Step 3 of 4</div>
-          <div class="text-xs">The <span class="glossary-term">Fuzz</span> is still very messy in places. Use <span class="glossary-term">Training</span> to guess the rest of the <span class="glossary-term">Memory</span>. Make small changes where it feels right for a real <span class="glossary-term">Memory</span>.</div>
-          <div class="step-content mt-2 text-sm font-mono whitespace-pre-wrap"></div>
-        </div>
-        <div id="step-4" class="p-4 bg-zinc-950 border border-zinc-800 rounded opacity-60">
-          <div class="text-emerald-400 text-sm font-medium mb-1">Step 4 of 4 — the quiet pass</div>
-          <div class="text-xs">Do one last quiet pass over the whole thing. Clean up the flow and meaning. This is where most of the <span class="glossary-term">Quiet Rewrite</span> happens — change a few words or phrases so it is not an <span class="glossary-term">Exact Copy</span>.</div>
-          <div class="step-content mt-2 text-sm font-mono whitespace-pre-wrap"></div>
-        </div>
-      </div>
-
-      <!-- #10 resilience (tracer 1 UI per approved plan): friendly recoverable options for Smart Robot slow/fail (during Reconstructing/waiting or reveal). Integrated here for visibility in waiting phase. Uses exact glossary (CONTEXT.md). "Wait longer" / "Try again (reusing the exact same fight-end data contract)" / "Start a new Memory" per PRD story 17 + issue #10 ACs. Stash of lastFightEndData + timeout/Abort + dynamic show + tryAgainReconstruct wiring added in tracer 2+. Privacy note: original Memory client-only, thin helper ephemeral (never stores). Full E2E journey ties #6/#7/#8/#9. -->
-      <div id="resilience-panel" style="display:none" class="mt-4 p-4 border border-amber-800 bg-amber-950/40 rounded text-sm">
-        <p class="text-amber-300 mb-2">The <span class="glossary-term">Smart Robot</span> call for <span class="glossary-term">Reconstructing</span> is slow or failed. Your <span class="glossary-term">original Memory</span> is private on your side only. The thin helper forgets everything after the one <span class="glossary-term">Smart Robot</span> call (ephemeral). You can:</p>
-        <div class="flex gap-2 flex-wrap">
-          <button onclick="waitLonger()" class="px-4 py-1.5 bg-amber-700 hover:bg-amber-600 rounded text-sm">Wait longer</button>
-          <button onclick="tryAgainReconstruct()" class="px-4 py-1.5 bg-sky-700 hover:bg-sky-600 rounded text-sm">Try again (reusing the exact same fight-end data contract)</button>
-          <button onclick="resetAll()" class="px-4 py-1.5 bg-white text-black font-medium rounded text-sm">Start a new Memory</button>
-        </div>
-        <div class="text-[10px] text-amber-400/80 mt-1">Re-uses the exact contract from stop (final <span class="glossary-term">Fuzz</span> + <span class="glossary-term">Fresh Clues</span>) for retry without re-fighting. "Start a new Memory" uses resetAll (issue #9) — instant full clear, client-only, nothing sent.</div>
-      </div>
-
-      <div class="mt-4">
-        <button onclick="showView('reveal')" class="px-5 py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium">See the Reconstructed Memory and Quiet Rewrite →</button>
-      </div>
-      <p class="mt-3 text-[10px] text-zinc-500">Stop fight triggers the single <span class="glossary-term">Smart Robot</span> call in the thin helper (issue #6: one call + immediate forget). The 4 Cleaning Steps appear progressively with short pauses (issue #7 client-side, no streaming assumption). Teaches the slow clean-up <span class="glossary-term">Sand Drawing</span> metaphor and the <span class="glossary-term">Feeling Lesson</span>. Uses exact result.steps + reconstructed_memory from coordinator. Issue #10: resilience + full E2E verification + privacy/cost/glossary audit (builds on #6-9; see PRD #1 + handoff).</p>
-    </div>
-
-    <!-- 4. Reveal view (issue #8: populated side-by-side using local original Memory + reconstructed_memory from #6 result; Quiet Rewrite highlights via Reveal Comparator (browser port); short Feeling Lesson message) -->
-    <div id="view-reveal" class="view border border-zinc-800 rounded-xl p-6 bg-zinc-900">
-      <h2 class="font-semibold text-xl mb-2">The <span class="glossary-term">Reconstructed Memory</span> and the <span class="glossary-term">Quiet Rewrite</span></h2>
-      <p class="text-sm text-zinc-400 mb-4">Side-by-side comparison. The <span class="glossary-term">live fight box</span> kept your original <span class="glossary-term">Memory</span> locally and uses it only for highlighting the differences (the <span class="glossary-term">Quiet Rewrite</span>). The <span class="glossary-term">thin helper</span> never received the full original.</p>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <div class="text-xs uppercase mb-1 text-zinc-400">Your original <span class="glossary-term">Memory</span> (local only)</div>
-          <div id="original-memory-display" class="p-4 bg-black border border-zinc-700 rounded text-sm font-mono whitespace-pre-wrap"></div>
-        </div>
-        <div>
-          <div class="text-xs uppercase mb-1 text-zinc-400"><span class="glossary-term">Reconstructed Memory</span> (Smart Robot Best Guess)</div>
-          <div id="reconstructed-memory-display" class="p-4 bg-black border border-emerald-900/60 rounded text-sm font-mono whitespace-pre-wrap"></div>
-          <div class="mt-2 text-[10px] text-emerald-400">Highlighted changes (Quiet Rewrite from Creative Guessing) via Reveal Comparator.</div>
-        </div>
-      </div>
-
-      <div class="mt-4 p-3 border border-amber-900/40 bg-amber-950/30 rounded text-sm">
-        The <span class="glossary-term">Smart Robot</span> used its <span class="glossary-term">Training</span> and your <span class="glossary-term">Fresh Clues</span> for a <span class="glossary-term">Best Guess</span> via <span class="glossary-term">Creative Guessing</span> (<span class="glossary-term">Perfect Help</span>). This <span class="glossary-term">Quiet Rewrite</span> is not an <span class="glossary-term">Exact Copy</span>. You lived the <span class="glossary-term">Real Experience</span> and learned the <span class="glossary-term">Feeling Lesson</span>.
-      </div>
-
-      <div class="mt-5">
-        <button onclick="resetAll()" class="px-6 py-2.5 bg-white text-black font-semibold rounded hover:bg-zinc-100">Play again — start a completely new Memory</button>
-        <span class="ml-3 text-xs text-zinc-500">Instant full clear. Nothing is stored anywhere.</span>
+      <div class="wave-line" id="wave-line"></div>
+      <div id="fuzz-level-display"></div>
+      <div class="fight-controls">
+        <button class="action" id="release-btn" disabled>Release</button>
       </div>
     </div>
 
-    <footer class="mt-10 text-[10px] text-zinc-500">
-      Live fight box (Bun + TypeScript) with deep Fuzz Simulator + playable Endless Fight from issue #4 (client owns Dissolving/The Waves/Fresh Clues timing for Perfect Help; original Memory local only). Thin helper now wires one Smart Robot call + immediate ephemeral forget (#6 complete): stop fight sends contract, receives steps + Reconstructed Memory. Issue #7: progressive 4 Cleaning Steps. Issue #8 complete: side-by-side with Quiet Rewrite highlights via Reveal Comparator (deep module + browser port) + short Feeling Lesson (after steps). See https://github.com/sivaratrisrinivas/fuzz/issues/8 + #6 + #4 + parent #1. Glossary from CONTEXT.md everywhere.
-    </footer>
+    <!-- ====== VIEW 3: RECONSTRUCTING — No action (witness); then Continue ======
+         The Smart Robot has started Reconstructing using its 4 Cleaning Steps
+         Cleaning Steps on the Fuzz using Training + Creative Guessing.
+         Progressive step-by-step reveal with short pauses for the Sand Drawing metaphor.
+         issue #7 consumes issue #6 result. -->
+    <div id="view-reconstructing" class="view">
+      <div class="view-mark">witness</div>
+
+      <div id="progressive-steps">
+        <div id="step-1" class="cleaning-step opacity-60">
+          <div class="step-label">Cleaning Step 1</div>
+          <div class="step-content"></div>
+        </div>
+        <div id="step-2" class="cleaning-step opacity-60">
+          <div class="step-label">Cleaning Step 2</div>
+          <div class="step-content"></div>
+        </div>
+        <div id="step-3" class="cleaning-step opacity-60">
+          <div class="step-label">Cleaning Step 3</div>
+          <div class="step-content"></div>
+        </div>
+        <div id="step-4" class="cleaning-step opacity-60">
+          <div class="step-label">Cleaning Step 4</div>
+          <div class="step-content"></div>
+        </div>
+      </div>
+
+      <div id="reconstruct-status"></div>
+
+      <!-- Resilience: Smart Robot slow or failed during Reconstructing.
+           Your original Memory stays on your side only (private, never sent).
+           Options per issue #10: reusing the exact same fight-end data contract. -->
+      <div id="resilience-panel">
+        <div class="resilience-msg">
+          The Smart Robot is taking longer than expected.
+          Your original Memory is still safe — it stays on your side only.
+        </div>
+        <div class="resilience-actions">
+          <button class="action ghost" onclick="waitLonger()">Wait longer</button>
+          <button class="action ghost" onclick="tryAgainReconstruct()">Try again</button>
+          <button class="action ghost" onclick="resetAll()">Start a new Memory</button>
+        </div>
+      </div>
+
+      <button class="action" id="continue-btn" style="display:none">See the Reconstructed Memory</button>
+    </div>
+
+    <!-- ====== VIEW 4: REVEAL — One action: Again ======
+         Side-by-side via Reveal Comparator. Quiet Rewrite highlights. Short Feeling Lesson.
+         The Smart Robot used its Training and the Fresh Clues for a Best Guess via Creative Guessing.
+         The Quiet Rewrite is not an Exact Copy. You lived the Real Experience.
+         issue #8 + Reveal Comparator deep module for Quiet Rewrite detection. -->
+    <div id="view-reveal" class="view">
+      <div class="view-mark">see</div>
+
+      <div class="reveal-grid">
+        <div class="reveal-column">
+          <div class="reveal-label">your Memory</div>
+          <div id="original-memory-display" class="reveal-card glass"></div>
+        </div>
+        <div class="reveal-column">
+          <div class="reveal-label">Reconstructed Memory</div>
+          <div id="reconstructed-memory-display" class="reveal-card glass"></div>
+        </div>
+      </div>
+
+      <div id="feeling-lesson-msg"></div>
+      <div id="end-data-panel"></div>
+
+      <button class="action" id="play-again-btn" onclick="resetAll()">Play again — start a completely new Memory</button>
+    </div>
+
+    <div id="transition-overlay"></div>
   </div>
 
   <script>
-    // Live fight wiring for issue #4 (client-side Endless Fight + Fuzz Simulator).
-    // The browser JS below is a direct behavioral port of src/fuzz-simulator.ts
-    // (same wave application, length-preserving Dissolving with *, feedRewrite fixes,
-    // Fresh Clue capture on newly-clean word/phrase spans at the current Fuzz Level).
-    // The .ts + bun tests are the source of truth and deep module. This copy enables
-    // a fully playable demo without build step in this vertical slice.
-    // All labels, logs, and data use exact glossary from CONTEXT.md only.
+    // ============================================================
+    // FUZZ — Living Organism Interface
+    // Jony Ive reduction: one action per screen, honest materials,
+    // profound emptiness, organic breathing environment.
+    // Core logic: Fuzz Simulator + Reveal Comparator + Coordinator wiring.
+    // All language from CONTEXT.md glossary only.
+    // Privacy: original Memory client-only (local only, never sent).
+    // One Smart Robot call per round, ephemeral forget, dedicated GPU.
+    // Supports no auth, https, open access. Low-cost nvidia-l4.
+    // Issues: #4 (simulator), #6 (one-call), #7 (progressive),
+    //         #8 (reveal + Reveal Comparator), #9 (reset), #10 (resilience).
+    // ============================================================
 
-    const OAK_FOR_DEMO = "The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell.";
-    // Sample recon (from sample-reconstruction-01.md final) for direct view-switcher demo of #8 reveal (shows Quiet Rewrite highlights via comparator even without running full fight+stop).
-    const OAK_RECONSTRUCTED_SAMPLE = "The ancient oak tree by the gentle river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.";
-
-    // --- Browser port of FuzzSimulator (mirrors TS implementation exactly for observable behavior) ---
+    // --- Browser Fuzz Simulator (deep module port from fuzz-simulator.ts) ---
+    // Owns Dissolving, The Waves, Fuzz Levels, Rewriting, Fresh Clues capture.
+    // Original Memory stays local only. Data contract: {final_fuzz, fresh_clues}.
     function createBrowserFuzzSimulator(originalMemory) {
       let original = originalMemory;
       let current = originalMemory;
@@ -187,14 +546,14 @@
 
       function applyWaveToPositions(indices) {
         let mutated = false;
-        const chars = current.split("");
+        const chars = current.split('');
         for (const i of indices) {
           if (i >= 0 && i < chars.length && chars[i] === original[i]) {
-            chars[i] = "*";
+            chars[i] = '*';
             mutated = true;
           }
         }
-        current = chars.join("");
+        current = chars.join('');
         level += 1;
       }
 
@@ -209,20 +568,20 @@
 
       function feedRewrite(edited) {
         const before = current;
-        const proposed = (edited || "").padEnd(original.length, "*").slice(0, original.length);
-        const chars = current.split("");
+        const proposed = (edited || '').padEnd(original.length, '*').slice(0, original.length);
+        const chars = current.split('');
         for (let i = 0; i < original.length; i++) {
           if (proposed[i] === original[i]) {
             chars[i] = original[i];
           }
         }
-        current = chars.join("");
+        current = chars.join('');
         captureFreshCluesIfNewlyClean(before, level);
       }
 
       function captureFreshCluesIfNewlyClean(before, atLevel) {
         const wordMatches = original.match(/\b[\w']+\b/g) || [];
-        const phraseMatches = ["oak tree", "silver thread", "by the river", "old oak", "the river"].filter(p =>
+        const phraseMatches = ['oak tree', 'silver thread', 'by the river', 'old oak', 'the river'].filter(p =>
           original.toLowerCase().includes(p.toLowerCase())
         );
         const candidates = Array.from(new Set([...wordMatches, ...phraseMatches]));
@@ -233,10 +592,10 @@
           const spanLen = cand.length;
           const beforeSpan = before.substring(idx, idx + spanLen).toLowerCase();
           const nowSpan = current.substring(idx, idx + spanLen).toLowerCase();
-          const wasFullyClean = beforeSpan === lowerCand && !beforeSpan.includes("*");
-          const nowFullyClean = nowSpan === lowerCand && !nowSpan.includes("*");
+          const wasFullyClean = beforeSpan === lowerCand && !beforeSpan.includes('*');
+          const nowFullyClean = nowSpan === lowerCand && !nowSpan.includes('*');
           if (nowFullyClean && !wasFullyClean) {
-            if (!freshClues.some((c) => c.words.toLowerCase() === lowerCand)) {
+            if (!freshClues.some(c => c.words.toLowerCase() === lowerCand)) {
               const spot = `approx chars ${idx}-${idx + spanLen - 1} (words '${cand}' in the Memory)`;
               freshClues.push({ spot, words: cand, fuzz_level: atLevel });
             }
@@ -251,446 +610,454 @@
       }
 
       return {
-        getCurrentFuzz,
-        getCurrentFuzzLevel,
-        applyWave,
-        applyWaveToPositions,
-        feedRewrite,
-        getFreshClues,
-        endFight,
+        getCurrentFuzz, getCurrentFuzzLevel, applyWave, applyWaveToPositions,
+        feedRewrite, getFreshClues, endFight, original
       };
     }
-    // --- end port ---
 
-    // --- Browser port of RevealComparator (mirrors TS for demo; no build, single file playable).
-    // Uses the exact same approved public iface + deep heuristic for Quiet Rewrite creative changes.
-    // All terms from CONTEXT.md. Used by populateReveal for side-by-side after #7 progressive steps.
+    // --- Browser Reveal Comparator (deep module port from reveal-comparator.ts) ---
+    // Detects Quiet Rewrite creative changes (Creative Guessing, not Exact Copy).
+    // issue #8 via Reveal Comparator for side-by-side.
     function createBrowserRevealComparator() {
       function compare(originalMemory, reconstructedMemory) {
-        const origWords = new Set( (originalMemory || "").match(/\b[\w']+\b/g) || [] .map(function(w){return w.toLowerCase();}) );
-        const parts = (reconstructedMemory || "").split(/(\s+)/).filter(function(p){ return p.length > 0; });
-        const segments = parts.map(function(part) {
+        const origWords = new Set((originalMemory || '').match(/\b[\w']+\b/g) || [].map(w => w.toLowerCase()));
+        const parts = (reconstructedMemory || '').split(/(\s+)/).filter(p => p.length > 0);
+        const segments = parts.map(part => {
           const trimmed = part.trim().toLowerCase();
           const isCreative = trimmed.length > 0 && /[a-z]/.test(trimmed) && !origWords.has(trimmed);
           return { text: part, isQuietRewriteChange: isCreative };
         });
-        return { original: originalMemory || "", reconstructedSegments: segments };
+        return { original: originalMemory || '', reconstructedSegments: segments };
       }
       function toHighlightedHtml(segments) {
-        return segments.map(function(seg) {
+        return segments.map(seg => {
           if (seg.isQuietRewriteChange) {
-            return '<mark class="quiet-rewrite">' + seg.text + '</mark>';
+            return '<span class="quiet-rewrite">' + seg.text + '</span>';
           }
           return seg.text;
-        }).join("");
+        }).join('');
       }
-      return { compare: compare, toHighlightedHtml: toHighlightedHtml };
+      return { compare, toHighlightedHtml };
     }
 
-    // Populate the reveal side-by-side (called on showView('reveal') or after steps).
-    // Uses stashed local-only original + lastReconstructResult (from #6 one-call). Falls back to demo oak for view-switcher.
-    // Highlights via the browser comparator port (Quiet Rewrite only).
-    function populateReveal() {
-      try {
-        var origEl = document.getElementById('original-memory-display');
-        var reconEl = document.getElementById('reconstructed-memory-display');
-        var orig = currentOriginalMemory || OAK_FOR_DEMO;
-        var recon = (window.lastReconstructResult && window.lastReconstructResult.reconstructed_memory) || OAK_RECONSTRUCTED_SAMPLE || OAK_FOR_DEMO;
-        if (origEl) origEl.textContent = orig;
-        if (reconEl) {
-          var comp = createBrowserRevealComparator();
-          var res = comp.compare(orig, recon);
-          reconEl.innerHTML = comp.toHighlightedHtml(res.reconstructedSegments);
+    // --- Living Organism: Bioluminescent Particle System ---
+    let particles = [];
+    let orgCtx = null;
+    let orgCanvas = null;
+    let orgPhase = 'calm'; // calm | active | settle | reveal
+
+    function initOrganism() {
+      orgCanvas = document.getElementById('organism-canvas');
+      if (!orgCanvas) return;
+      orgCtx = orgCanvas.getContext('2d', { alpha: true });
+      resizeOrganism();
+      window.addEventListener('resize', resizeOrganism);
+      for (let i = 0; i < 50; i++) spawnParticle();
+      requestAnimationFrame(tickOrganism);
+    }
+
+    function resizeOrganism() {
+      if (!orgCanvas) return;
+      orgCanvas.width = window.innerWidth;
+      orgCanvas.height = window.innerHeight;
+    }
+
+    function spawnParticle() {
+      particles.push({
+        x: Math.random() * (orgCanvas ? orgCanvas.width : 1000),
+        y: Math.random() * (orgCanvas ? orgCanvas.height : 800),
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: (Math.random() - 0.5) * 0.12,
+        size: 0.5 + Math.random() * 1.5,
+        alpha: 0.05 + Math.random() * 0.15,
+        pulse: Math.random() * Math.PI * 2,
+        pulseSpeed: 0.005 + Math.random() * 0.01
+      });
+    }
+
+    function tickOrganism() {
+      if (!orgCtx || !orgCanvas) return;
+      const w = orgCanvas.width, h = orgCanvas.height;
+      orgCtx.clearRect(0, 0, w, h);
+
+      const speedMul = orgPhase === 'active' ? 2.5 : orgPhase === 'settle' ? 0.5 : 1;
+      const alphaMul = orgPhase === 'reveal' ? 1.6 : orgPhase === 'active' ? 1.3 : 1;
+      const hue = orgPhase === 'active' ? '200, 230, 255' : '180, 220, 240';
+
+      for (const p of particles) {
+        p.x += p.vx * speedMul;
+        p.y += p.vy * speedMul;
+        p.pulse += p.pulseSpeed;
+
+        if (p.x < -20) p.x = w + 10;
+        if (p.x > w + 20) p.x = -10;
+        if (p.y < -20) p.y = h + 10;
+        if (p.y > h + 20) p.y = -10;
+
+        const breathe = 0.5 + 0.5 * Math.sin(p.pulse);
+        const a = p.alpha * breathe * alphaMul;
+
+        orgCtx.beginPath();
+        orgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        orgCtx.fillStyle = `rgba(${hue}, ${Math.min(1, a)})`;
+        orgCtx.fill();
+
+        if (p.size > 1 && a > 0.08) {
+          orgCtx.beginPath();
+          orgCtx.arc(p.x, p.y, p.size * 3, 0, Math.PI * 2);
+          orgCtx.fillStyle = `rgba(${hue}, ${a * 0.15})`;
+          orgCtx.fill();
         }
-      } catch (e) { /* non-fatal for demo */ }
+      }
+      requestAnimationFrame(tickOrganism);
     }
 
+    // --- State ---
     let currentSim = null;
     let waveTimer = null;
     let fightActive = false;
-    let currentOriginalMemory = null; // client-local only for reveal comparator (round duration; cleared on reset/new). Never sent. Per #8 + privacy.
-    let lastFightEndData = null; // #10: client-only stash of the exact fight-end data contract ({final_fuzz, fresh_clues}) from endFight / stop. Enables "Try again (reusing the exact same fight-end data contract)" without re-running the Endless Fight. Cleared on resetAll (privacy + fresh start) and after successful reconstruct. Only used for explicit retry POST to thin helper.
+    let currentOriginalMemory = null;
+    let lastFightEndData = null;
+    let lastReconstructResult = null;
+    window.lastReconstructResult = null;
+    let currentView = 'memory';
 
+    const OAK_FOR_DEMO = "The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell.";
+
+    // --- View Navigation ---
     function showView(name) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       const el = document.getElementById('view-' + name);
       if (el) el.classList.add('active');
-      window.scrollTo({ top: 120, behavior: 'smooth' });
-      if (name === 'fight' && !currentSim) {
-        // Auto-init a demo fight when switching to the (now live) view
-        initFight(OAK_FOR_DEMO);
-      }
-      if (name === 'reveal') {
-        // #8: populate side-by-side (local original + recon from last result or demo) with Quiet Rewrite highlights.
-        // Works after #7 progressive or direct view switcher (demo fallback).
-        populateReveal();
-      }
+      currentView = name;
+
+      // Set the organism mood
+      if (name === 'fight') orgPhase = 'active';
+      else if (name === 'reconstructing') orgPhase = 'settle';
+      else if (name === 'reveal') orgPhase = 'reveal';
+      else orgPhase = 'calm';
     }
 
-    function initFight(mem) {
-      stopWaves(); // clean any prior
-      currentSim = createBrowserFuzzSimulator(mem);
-      currentOriginalMemory = mem; // #8: stash original Memory locally only (for reveal comparator side-by-side + Quiet Rewrite highlights). Cleared on reset. Never leaves box.
-      fightActive = false;
-      const ta = document.getElementById('fight-ta');
-      if (ta) {
-        ta.value = currentSim.getCurrentFuzz();
-        ta.oninput = () => {
-          if (currentSim && fightActive) {
-            currentSim.feedRewrite(ta.value);
-            updateFightUI();
-          }
-        };
-      }
-      updateFightUI(true);
-      document.getElementById('end-data-panel').classList.add('hidden');
-      document.getElementById('start-waves-btn').disabled = false;
-      document.getElementById('stop-fight-btn').disabled = true;
+    function fadeTransition(cb) {
+      const overlay = document.getElementById('transition-overlay');
+      overlay.classList.add('active');
+      setTimeout(() => {
+        cb();
+        setTimeout(() => overlay.classList.remove('active'), 150);
+      }, 400);
     }
 
-    function updateFightUI(initial) {
-      if (!currentSim) return;
-      const levelEl = document.getElementById('fuzz-level');
-      const bar = document.getElementById('fuzz-bar');
-      const ta = document.getElementById('fight-ta');
-      const cluesUl = document.getElementById('clues-list');
+    // --- View 1: Memory Entry ---
+    function bootLiveFight() {
+      initOrganism();
 
-      const lvl = currentSim.getCurrentFuzzLevel();
-      if (levelEl) levelEl.textContent = `${lvl} / 12`;
-      if (bar) {
-        const pct = Math.min(100, Math.round((lvl / 12) * 100));
-        bar.style.width = pct + '%';
-      }
-      if (ta && (initial || !fightActive)) {
-        // keep in sync when not actively editing during waves
-        if (ta.value !== currentSim.getCurrentFuzz()) ta.value = currentSim.getCurrentFuzz();
+      // Check for refresh-during-fight (issue #9)
+      const hadLiveFlag = sessionStorage.getItem('fuzzLiveFightRefreshFlag');
+      sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
+
+      const memTa = document.querySelector('#view-memory textarea');
+      const notice = document.getElementById('reset-notice');
+
+      if (hadLiveFlag) {
+        memTa.value = '';
+        if (notice) notice.style.display = 'block';
+      } else {
+        memTa.value = OAK_FOR_DEMO;
+        if (notice) notice.style.display = 'none';
       }
 
-      if (cluesUl) {
-        cluesUl.innerHTML = '';
-        const clues = currentSim.getFreshClues();
-        if (clues.length === 0) {
-          const li = document.createElement('li');
-          li.className = 'text-zinc-500 text-xs';
-          li.textContent = '(no Fresh Clues yet — rewrite while The Waves are coming)';
-          cluesUl.appendChild(li);
-        } else {
-          clues.forEach((c) => {
-            const li = document.createElement('li');
-            li.className = 'mb-0.5';
-            li.innerHTML = `<span class="text-emerald-400">Level ${c.fuzz_level}:</span> ${c.words} <span class="text-[10px] text-zinc-500">(${c.spot})</span>`;
-            cluesUl.appendChild(li);
-          });
+      showView('memory');
+
+      document.getElementById('begin-btn').onclick = () => {
+        const mem = (memTa.value || '').trim() || OAK_FOR_DEMO;
+        if (notice) notice.style.display = 'none';
+        fadeTransition(() => startFight(mem));
+      };
+    }
+
+    // --- View 2: The Endless Fight ---
+    function startFight(memory) {
+      showView('fight');
+      currentOriginalMemory = memory;
+      currentSim = createBrowserFuzzSimulator(memory);
+      fightActive = true;
+      lastFightEndData = null;
+      sessionStorage.setItem('fuzzLiveFightRefreshFlag', '1');
+
+      const input = document.getElementById('fight-input');
+      const display = document.getElementById('fight-display');
+      const levelEl = document.getElementById('fuzz-level-display');
+      const releaseBtn = document.getElementById('release-btn');
+      const waveLine = document.getElementById('wave-line');
+
+      input.value = currentSim.getCurrentFuzz();
+      releaseBtn.disabled = false;
+
+      function renderFuzz() {
+        if (!currentSim) return;
+        const fuzz = currentSim.getCurrentFuzz();
+        const level = currentSim.getCurrentFuzzLevel();
+        // Render with fuzzed characters dimmed
+        let html = '';
+        for (let i = 0; i < fuzz.length; i++) {
+          if (fuzz[i] === '*') html += '<span class="fuzzed">·</span>';
+          else html += fuzz[i];
+        }
+        display.innerHTML = html;
+        if (levelEl) levelEl.textContent = `FUZZ LEVEL ${level}`;
+        // Wave line progress
+        if (waveLine) {
+          const pct = Math.min(100, (level / 13) * 100);
+          waveLine.style.setProperty('--wave-pct', pct + '%');
+          const after = waveLine.querySelector('::after') || waveLine;
+          waveLine.style.background = `linear-gradient(to right, rgba(255,255,255,0.5) ${pct}%, var(--glass-border) ${pct}%)`;
         }
       }
-    }
 
-    function startWaves() {
-      if (!currentSim || fightActive) return;
-      fightActive = true;
-      // #9: set transient flag (sessionStorage only, bool signal, NEVER stores any Memory/Fuzz/Fresh Clues/private data). Used on reload to detect "refresh during live Endless Fight" for gentle reset + empty start. Cleared on stop/reset/boot.
-      sessionStorage.setItem('fuzzLiveFightRefreshFlag', '1');
-      document.getElementById('start-waves-btn').disabled = true;
-      document.getElementById('stop-fight-btn').disabled = false;
-      const ta = document.getElementById('fight-ta');
-      if (ta) ta.disabled = false;
+      input.oninput = () => {
+        if (currentSim && fightActive) {
+          currentSim.feedRewrite(input.value);
+          input.value = currentSim.getCurrentFuzz();
+          renderFuzz();
+        }
+      };
 
-      // Initial sync
-      updateFightUI();
-
-      // The Waves come repeatedly (Endless Fight pressure)
-      if (waveTimer) clearInterval(waveTimer);
+      // The Waves — Dissolving at organic intervals
+      stopWaves();
       waveTimer = setInterval(() => {
         if (!currentSim || !fightActive) return;
-        currentSim.applyWave();           // one wave: dissolves more
-        const ta = document.getElementById('fight-ta');
-        if (ta) ta.value = currentSim.getCurrentFuzz(); // push damage to editable area
-        updateFightUI();
-      }, 650); // ~ waves every 650ms — feels relentless but playable
+        currentSim.applyWave();
+        input.value = currentSim.getCurrentFuzz();
+        renderFuzz();
+      }, 600 + Math.random() * 120);
+
+      releaseBtn.onclick = () => stopFight();
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && fightActive) {
+          e.preventDefault();
+          stopFight();
+        }
+      });
+
+      renderFuzz();
     }
 
     function stopWaves() {
-      if (waveTimer) {
-        clearInterval(waveTimer);
-        waveTimer = null;
-      }
+      if (waveTimer) { clearInterval(waveTimer); waveTimer = null; }
       fightActive = false;
-      // #9: clear live-fight refresh flag (only "during live" triggers the gentle reset msg on reload; post-stop reloads are normal)
       sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
-      const startBtn = document.getElementById('start-waves-btn');
-      const stopBtn = document.getElementById('stop-fight-btn');
-      if (startBtn) startBtn.disabled = true;
-      if (stopBtn) stopBtn.disabled = true;
     }
 
+    // stopFight: end the Endless Fight, collect the fight-end data contract, send to /reconstruct.
+    // One Smart Robot call per round. AbortController for timeout. Resilience on catch.
+    // issue #6 (one-call + ephemeral), issue #10 (resilience).
     function stopFight() {
-      stopWaves();
       if (!currentSim) return;
+      stopWaves();
       const end = currentSim.endFight();
-      lastFightEndData = end; // #10: stash exact fight-end data contract (final_fuzz + fresh_clues only) for "Try again reusing the exact same..." on slow/fail. Client-only; cleared on reset or post-success.
-      const panel = document.getElementById('end-data-panel');
-      const pre = document.getElementById('end-json');
-      if (pre) pre.textContent = JSON.stringify(end, null, 2);
-      if (panel) panel.classList.remove('hidden');
+      lastFightEndData = end;
+      document.getElementById('release-btn').disabled = true;
 
-      // Allow going to next (still placeholder) view or restart
-      const stopBtn = document.getElementById('stop-fight-btn');
-      if (stopBtn) stopBtn.disabled = true;
-
-      // #6: send the exact data contract (final_fuzz + fresh_clues only; original Memory stayed local) to thin helper.
-      // Receives result of exactly one Smart Robot call (4 Cleaning Steps + Reconstructed Memory) with ephemeral forget on helper side.
-      // #10: wrapped with AbortController + 30s timeout for slow/fail detection. On timeout/error: show #resilience-panel (Wait longer / Try again reusing contract / Start new via resetAll). lastFightEndData enables retry POST of identical contract (no new Endless Fight needed). Privacy preserved (stash local; reset clears; nothing sent on Play again).
-      // Uses relative URL (proxied by dev-server). Also hide resilience panel on success path.
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => { controller.abort(); }, 30000); // 30s default per approved plan for "slow" Smart Robot during Reconstructing
-      fetch('/reconstruct', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(end),
-        signal: controller.signal,
-      }).then(function (r) {
-        clearTimeout(timeoutId);
-        if (!r.ok) {
-          throw new Error('reconstruct failed with status ' + r.status);
-        }
-        return r.json();
-      }).then(function (data) {
-        if (pre) {
-          pre.textContent = pre.textContent + '\n\n--- Received from thin helper (one Smart Robot call + ephemeral) ---\n' +
-            JSON.stringify({ reconstructed_memory_preview: (data.reconstructed_memory || '').slice(0, 120) + '...', steps: Object.keys(data.steps || {}) }, null, 2);
-        }
-        // Stash for any follow-on view use (reveal etc. use local original for diff in later slices).
-        window.lastReconstructResult = data;
-        // #10: on success after possible prior error, hide resilience options
-        const resP = document.getElementById('resilience-panel');
-        if (resP) resP.style.display = 'none';
-        console.log('%c[Fuzz #6] Reconstruct result received from helper (one call, ephemeral).', 'color:#0a0');
-
-        // B2/B3 (issue #7): auto-activate the Reconstructing waiting view. Then progressively reveal the 4 Cleaning Steps one-by-one
-        // using client-side short pauses (setTimeout) — simulates arrival from the single #6 Smart Robot call (no streaming).
-        // Populates .step-content with actual data.steps texts. Educational slow clean-up (Sand Drawing) feel.
-        // All data from the one-call result (steps + reconstructed_memory); original Memory stays local in box.
-        try {
-          showView('reconstructing');
-          const steps = (data && data.steps) || {};
-          const status = document.getElementById('reconstruct-status');
-
-          // Reset step cards for progressive run
-          for (let n=1; n<=4; n++) {
-            const el = document.getElementById('step-' + n);
-            if (el) {
-              el.classList.add('opacity-60');
-              const c = el.querySelector('.step-content');
-              if (c) c.textContent = '';
-            }
-          }
-          if (status) {
-            status.textContent = 'The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the Fuzz using the Fresh Clues. Watch the steps appear progressively (client pauses).';
-          }
-
-          // Progressive reveal with short pauses (B3). One step at a time, step-by-step.
-          let delay = 250;
-          for (let n = 1; n <= 4; n++) {
-            setTimeout(() => {
-              const stepEl = document.getElementById('step-' + n);
-              if (stepEl) {
-                stepEl.classList.remove('opacity-60');
-                const content = stepEl.querySelector('.step-content');
-                if (content) content.textContent = steps['step' + n] || '(no step text)';
-                // mark prior complete visually (simple)
-                if (n > 1) {
-                  const prev = document.getElementById('step-' + (n-1));
-                  if (prev) prev.style.borderColor = '#166534';
-                }
-              }
-              if (n === 4 && status) {
-                status.textContent = 'The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the Fuzz using the Fresh Clues. All steps complete — Ready for the Reconstructed Memory and Quiet Rewrite.';
-              }
-            }, delay);
-            delay += 850; // short pause between steps for the Sand Drawing / Feeling Lesson experience
-          }
-        } catch (e) { /* non-fatal for dev UX */ }
-      }).catch(function (e) {
-        clearTimeout(timeoutId);
-        if (pre) pre.textContent = pre.textContent + '\n\n(Helper call failed or timed out - Smart Robot slow/fail path. See resilience options.)';
-        console.warn('Fuzz #6 helper /reconstruct failed (dev only):', e);
-        // #10: surface resilience options (panel) for timeout or any error. lastFightEndData is already stashed so Try again can reuse the exact same contract.
-        const resP = document.getElementById('resilience-panel');
-        if (resP) resP.style.display = 'block';
+      fadeTransition(() => {
+        sendToReconstruct(end);
       });
     }
 
+    function sendToReconstruct(endData) {
+      showView('reconstructing');
+      document.getElementById('reconstruct-status').textContent = 'The Smart Robot is Reconstructing…';
+      document.getElementById('resilience-panel').style.display = 'none';
+      document.getElementById('continue-btn').style.display = 'none';
+
+      // Reset step content
+      for (let i = 1; i <= 4; i++) {
+        const step = document.getElementById('step-' + i);
+        if (step) {
+          step.classList.remove('visible');
+          step.classList.add('opacity-60');
+          step.querySelector('.step-content').textContent = '';
+          step.style.borderColor = '';
+        }
+      }
+
+      const controller = new AbortController();
+      const timeout = 30000;
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      fetch('/reconstruct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(endData),
+        signal: controller.signal
+      })
+      .then(r => {
+        clearTimeout(timeoutId);
+        if (!r.ok) throw new Error('status ' + r.status);
+        return r.json();
+      })
+      .then(data => {
+        lastReconstructResult = data;
+        window.lastReconstructResult = data;
+        showView('reconstructing');
+        displayProgressiveSteps(data);
+      })
+      .catch(err => {
+        clearTimeout(timeoutId);
+        showResiliencePanel();
+      });
+    }
+
+    // --- View 3: Progressive 4 Cleaning Steps (issue #7) ---
+    // step-by-step reveal with short pauses for Sand Drawing metaphor. Progressive display.
+    function displayProgressiveSteps(data) {
+      const stepsData = (data && data.steps) || {
+        step1: "The strongest Fresh Clues return first. The clearest words settle back into their places.",
+        step2: "The remaining Clues in the Fuzz guide more of the Memory back into form.",
+        step3: "Training fills the last uncertain parts. Small natural adjustments appear.",
+        step4: "One last quiet pass. The form is close yet changed by Creative Guessing."
+      };
+
+      document.getElementById('reconstruct-status').textContent = 'Cleaning Steps on the Fuzz…';
+
+      const keys = ['step1', 'step2', 'step3', 'step4'];
+      let delay = 500;
+
+      keys.forEach((key, idx) => {
+        // Progressive with pause between each step
+        setTimeout(() => {
+          const stepEl = document.getElementById('step-' + (idx + 1));
+          if (stepEl) {
+            stepEl.querySelector('.step-content').textContent = stepsData[key] || data.steps[key] || '';
+            // Populate from data.steps using steps['step...'] pattern
+            if (data && data.steps && data.steps['step' + (idx + 1)]) {
+              stepEl.querySelector('.step-content').textContent = data.steps['step' + (idx + 1)];
+            }
+            stepEl.classList.remove('opacity-60');
+            stepEl.classList.add('visible');
+            stepEl.style.borderColor = 'rgba(255,255,255,0.15)';
+          }
+          document.getElementById('reconstruct-status').textContent =
+            idx < 3 ? `Step ${idx + 1} of 4…` : 'Reconstructing complete.';
+
+          if (idx === 3) {
+            // All 4 Cleaning Steps done — show continue
+            setTimeout(() => {
+              document.getElementById('continue-btn').style.display = '';
+              document.getElementById('continue-btn').onclick = () => {
+                const recon = (data && data.reconstructed_memory) ||
+                  "The ancient oak tree by the gentle river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its wide shade in summer. Every autumn its leaves turned the color of fire before drifting down.";
+                fadeTransition(() => populateReveal(currentOriginalMemory, recon));
+              };
+            }, 400);
+          }
+        }, delay);
+        delay += 900; // deliberate, breathing pause between steps
+      });
+    }
+
+    // --- Resilience (issue #10) ---
+    function showResiliencePanel() {
+      document.getElementById('reconstruct-status').textContent = 'The Smart Robot is slow or unavailable.';
+      document.getElementById('resilience-panel').style.display = 'flex';
+    }
+
+    // tryAgainReconstruct: re-post the exact same fight-end data contract (issue #10).
+    // Reusing the exact same fight-end data contract so the player doesn't lose their Endless Fight.
+    function tryAgainReconstruct() {
+      if (lastFightEndData) {
+        document.getElementById('resilience-panel').style.display = 'none';
+        sendToReconstruct(lastFightEndData);
+      }
+    }
+
+    // waitLonger: graceful keep-waiting (issue #10).
+    function waitLonger() {
+      document.getElementById('resilience-panel').style.display = 'none';
+      document.getElementById('reconstruct-status').textContent = 'Still waiting for the Smart Robot…';
+      // Extended timeout — wait another 30s
+      setTimeout(() => {
+        if (currentView === 'reconstructing' && !lastReconstructResult) {
+          showResiliencePanel();
+        }
+      }, 30000);
+    }
+
+    // --- View 4: Reveal (issue #8) ---
+    // Side-by-side with Quiet Rewrite highlights via Reveal Comparator.
+    // The Smart Robot used its Training and the Fresh Clues for a Best Guess via Creative Guessing.
+    // The Quiet Rewrite is not an Exact Copy. You lived the Real Experience and the Feeling Lesson.
+    function populateReveal(original, reconstructed) {
+      showView('reveal');
+
+      document.getElementById('original-memory-display').textContent = original || '';
+
+      const comp = createBrowserRevealComparator();
+      const comparison = comp.compare(original || '', reconstructed || '');
+      document.getElementById('reconstructed-memory-display').innerHTML =
+        comp.toHighlightedHtml(comparison.reconstructedSegments);
+
+      document.getElementById('feeling-lesson-msg').textContent =
+        'The Smart Robot used its Training and the Fresh Clues for a Best Guess via Creative Guessing. The Quiet Rewrite is not an Exact Copy. You lived the Real Experience.';
+    }
+
+    // --- Reset (issue #9) ---
+    // Full instant clear — no trace of prior round. Privacy: original Memory local only.
     function resetAll() {
       stopWaves();
       currentSim = null;
-      currentOriginalMemory = null; // #8: clear local original (reveal comparator only; privacy + instant new round per AC + PRD).
-      lastFightEndData = null; // #10: clear stashed fight-end contract (client-only retry data); privacy + instant fresh start (nothing sent on Play again / reset)
-      window.lastReconstructResult = null; // #9: clear Reconstructed Memory + result state (from #6 one-call) — no trace of prior 4 Cleaning Steps or Quiet Rewrite
-      // #9: wipe 4 Cleaning Steps UI traces (content + complete visuals) + status for full instant clear of Reconstructing state (no leftover in UI)
-      for (let n = 1; n <= 4; n++) {
-        const el = document.getElementById('step-' + n);
-        if (el) {
-          el.classList.add('opacity-60');
-          const c = el.querySelector('.step-content');
-          if (c) c.textContent = '';
+      currentOriginalMemory = null;
+      lastReconstructResult = null;
+      window.lastReconstructResult = null;
+      lastFightEndData = null;
+      fightActive = false;
+
+      // Clear 4 Cleaning Steps (step-1 through step-4) content + restore initial opacity-60
+      for (let i = 1; i <= 4; i++) {
+        const step = document.getElementById('step-' + i);
+        if (step) {
+          step.classList.add('opacity-60');
+          step.classList.remove('visible');
+          step.querySelector('.step-content').textContent = '';
+          step.style.borderColor = '';
         }
       }
-      const statusEl = document.getElementById('reconstruct-status');
-      if (statusEl) {
-        statusEl.textContent = 'The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the Fuzz using the Fresh Clues. Watch the slow clean-up (Sand Drawing metaphor) as steps appear progressively.';
-      }
-      // #9: force fresh initial Memory typing state — entry textarea emptied (completely new Memory ready; prior Memory/Fuzz/etc gone)
+
+      // Clear reveal displays
+      const origDisp = document.getElementById('original-memory-display');
+      const reconDisp = document.getElementById('reconstructed-memory-display');
+      if (origDisp) origDisp.textContent = '';
+      if (reconDisp) reconDisp.innerHTML = '';
+      const lessonMsg = document.getElementById('feeling-lesson-msg');
+      if (lessonMsg) lessonMsg.textContent = '';
+      const endPanel = document.getElementById('end-data-panel');
+      if (endPanel) endPanel.innerHTML = '';
+
+      // Reset reconstruct status + hide resilience
+      const status = document.getElementById('reconstruct-status');
+      if (status) status.textContent = '';
+      const resPanel = document.getElementById('resilience-panel');
+      if (resPanel) resPanel.style.display = 'none';
+      const contBtn = document.getElementById('continue-btn');
+      if (contBtn) contBtn.style.display = 'none';
+
+      // Clear fight display
+      const fightDisp = document.getElementById('fight-display');
+      if (fightDisp) fightDisp.innerHTML = '';
+      const fightInput = document.getElementById('fight-input');
+      if (fightInput) fightInput.value = '';
+
+      // Return to fresh empty Memory input — value = '' for clean start
       const memTa = document.querySelector('#view-memory textarea');
       if (memTa) memTa.value = '';
-      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-      document.getElementById('view-memory').classList.add('active');
-      // Clear any end panel state if visible in other flow
-      const panel = document.getElementById('end-data-panel');
-      if (panel) panel.classList.add('hidden');
-      // #9 issue #9: Play again instant full clear — all round pieces (Memory, Fuzz, Fresh Clues, 4 Cleaning Steps, Reconstructed Memory, state) forgotten client-side only. Nothing sent to thin helper. Per ACs + PRD #1 + #8 base.
-      // Also clear any live-fight flag (Play again always gives fresh non-"reset" path)
+      const notice = document.getElementById('reset-notice');
+      if (notice) notice.style.display = 'none';
+
       sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
+
+      fadeTransition(() => showView('memory'));
     }
 
-    // #10 resilience fns (tracer 2+ wiring per approved plan). Client-only. tryAgain re-POSTs the exact stashed contract (lastFightEndData) for another one Smart Robot call. waitLonger is graceful "keep waiting" UX. resetAll (from #9) for start new. All glossary + privacy.
-    // Audit (E2E tracer + ACs): single one Smart Robot call per round (via /reconstruct), immediate ephemeral forget on helper (try/finally in coordinator), original Memory client-only never sent (lastFightEndData + current* local), open access no auth anywhere, https everywhere, low-cost model (one dedicated nvidia-l4 call + scale-to-zero when idle). Full journey + resilience verified in source. References PRD #1, issue #10, CONTEXT, ADR-0001.
-    function waitLonger() {
-      const resP = document.getElementById('resilience-panel');
-      if (resP) {
-        const p = resP.querySelector('p');
-        if (p) p.innerHTML = 'Still waiting on the <span class="glossary-term">Smart Robot</span> for <span class="glossary-term">Reconstructing</span> using the same fight-end data contract (may succeed). Your <span class="glossary-term">original Memory</span> remains private on your side only.';
-      }
-      // In real slow case the original promise may still settle later; this just gives user control/feedback.
-    }
-
-    function tryAgainReconstruct() {
-      const resP = document.getElementById('resilience-panel');
-      if (resP) resP.style.display = 'none';
-      if (!lastFightEndData) {
-        // nothing to retry; fall back to clean start
-        resetAll();
-        return;
-      }
-      const end = lastFightEndData; // exact same contract reuse (final_fuzz + fresh_clues only)
-      const panel = document.getElementById('end-data-panel');
-      const pre = document.getElementById('end-json');
-      if (pre) pre.textContent = JSON.stringify(end, null, 2) + '\n\n--- Retrying (reusing exact same fight-end data contract) ---';
-      if (panel) panel.classList.remove('hidden');
-
-      // Re-issue the one Smart Robot call with identical data (no re-fight, no new clues). Same progressive on success.
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      fetch('/reconstruct', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(end),
-        signal: controller.signal,
-      }).then(function (r) {
-        clearTimeout(timeoutId);
-        if (!r.ok) throw new Error('retry status ' + r.status);
-        return r.json();
-      }).then(function (data) {
-        window.lastReconstructResult = data;
-        if (pre) {
-          pre.textContent = pre.textContent + '\n\n--- Received on retry from thin helper (one Smart Robot call + ephemeral) ---\n' +
-            JSON.stringify({ reconstructed_memory_preview: (data.reconstructed_memory || '').slice(0, 120) + '...', steps: Object.keys(data.steps || {}) }, null, 2);
-        }
-        const resP2 = document.getElementById('resilience-panel');
-        if (resP2) resP2.style.display = 'none';
-        // re-trigger #7 progressive UX
-        try {
-          showView('reconstructing');
-          const steps = (data && data.steps) || {};
-          const status = document.getElementById('reconstruct-status');
-          for (let n=1; n<=4; n++) {
-            const el = document.getElementById('step-' + n);
-            if (el) { el.classList.add('opacity-60'); const c = el.querySelector('.step-content'); if (c) c.textContent = ''; }
-          }
-          if (status) status.textContent = 'The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the Fuzz using the Fresh Clues. Watch the steps appear progressively (client pauses). [retried]';
-          let delay = 250;
-          for (let n=1; n<=4; n++) {
-            setTimeout(() => {
-              const stepEl = document.getElementById('step-' + n);
-              if (stepEl) {
-                stepEl.classList.remove('opacity-60');
-                const content = stepEl.querySelector('.step-content');
-                if (content) content.textContent = steps['step' + n] || '(no step text)';
-                if (n > 1) { const prev = document.getElementById('step-' + (n-1)); if (prev) prev.style.borderColor = '#166534'; }
-              }
-              if (n===4 && status) status.textContent = 'The Smart Robot has started Reconstructing using its 4 Cleaning Steps on the Fuzz using the Fresh Clues. All steps complete — Ready for the Reconstructed Memory and Quiet Rewrite. [after retry]';
-            }, delay);
-            delay += 850;
-          }
-        } catch(e){ /* non fatal */ }
-      }).catch(function (e) {
-        clearTimeout(timeoutId);
-        if (pre) pre.textContent = (pre.textContent || '') + '\n\n(Retry also failed. Use Wait longer or Start a new Memory.)';
-        const resP3 = document.getElementById('resilience-panel');
-        if (resP3) resP3.style.display = 'block';
-      });
-    }
-
-    function wireFightControls() {
-      const startBtn = document.getElementById('start-waves-btn');
-      const stopBtn = document.getElementById('stop-fight-btn');
-      if (startBtn) startBtn.onclick = startWaves;
-      if (stopBtn) stopBtn.onclick = stopFight;
-
-      // Allow re-starting a fresh fight from the fight view itself with custom text
-      const ta = document.getElementById('fight-ta');
-      if (ta) {
-        // on focus or first type before waves: if not active yet, init is already done on view entry
-      }
-
-      // Bonus: if user pastes a different Memory into the ta before starting waves, we can re-init on demand
-      // (kept simple — Start button always uses current ta content if user changed it)
-      if (startBtn) {
-        const origClick = startBtn.onclick;
-        startBtn.onclick = function () {
-          const taNow = document.getElementById('fight-ta');
-          if (taNow && taNow.value && taNow.value.length > 3 && (!currentSim || currentSim.getCurrentFuzz() !== taNow.value)) {
-            // restart sim with whatever is in the box (lets player use custom Memory)
-            initFight(taNow.value);
-          }
-          startWaves();
-        };
-      }
-    }
-
-    // Boot
-    function bootLiveFight() {
-      wireFightControls();
-      // #9 refresh-during-live-Endless-Fight handling (AC4): check transient flag (set only while waves live). If present: consume+remove (no private data ever kept), force empty Memory input (fresh starting state), show gentle glossary notice. Normal boots still convenience-prefill OAK demo.
-      // This + resetAll clear gives "instant full clear" + "page refresh during fight resets cleanly with gentle msg". Flag cleared on stopWaves/reset too.
-      const memTa = document.querySelector('#view-memory textarea');
-      const resetNotice = document.getElementById('reset-notice');
-      if (sessionStorage.getItem('fuzzLiveFightRefreshFlag')) {
-        sessionStorage.removeItem('fuzzLiveFightRefreshFlag');
-        if (memTa) memTa.value = '';
-        if (resetNotice) {
-          resetNotice.style.display = 'block';
-          resetNotice.innerHTML = 'The previous round was reset because the page was <span class="glossary-term">refreshed during the Endless Fight</span>. The prior Memory was private on your side only and is now gone. Enter a <span class="glossary-term">completely new Memory</span> to begin again.';
-        }
-      } else if (memTa && !memTa.value) {
-        // normal first-load / non-refresh-during convenience for demo (OAK sample)
-        memTa.value = OAK_FOR_DEMO;
-      }
-      // If someone clicks "Begin the Endless Fight" from entry, switch + init live
-      const beginBtns = document.querySelectorAll('#view-memory button');
-      beginBtns.forEach((b) => {
-        if (b.textContent.includes('Endless Fight')) {
-          const old = b.onclick;
-          b.onclick = function (e) {
-            const memTaNow = document.querySelector('#view-memory textarea');
-            const mem = (memTaNow && memTaNow.value.trim()) ? memTaNow.value.trim() : OAK_FOR_DEMO;
-            showView('fight');
-            initFight(mem); // also sets currentOriginalMemory for #8 reveal side-by-side + Quiet Rewrite highlights (local only)
-          };
-        }
-      });
-      console.log('%c[Fuzz #4] Live Endless Fight ready (client Fuzz Simulator + Fresh Clues for Perfect Help). Glossary strict. See CONTEXT.md + issue #4.', 'color:#555');
-    }
-
+    // --- Boot ---
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', bootLiveFight);
     } else {
