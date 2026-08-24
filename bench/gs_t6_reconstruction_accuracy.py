@@ -6,8 +6,9 @@ This script imports that file's one-call helpers (prompt build + Smart Robot cha
 and scores the Reconstructed Memory with ReconstructCoordinator.parse_reconstruction,
 the same parser the thin helper uses in play.
 
-Dissolving matches box/src/fuzz-simulator.ts: selected characters become '*'.
-Fresh Clues are left empty so the curve is Fuzz Level only.
+Dissolving is driven by box/src/fuzz-simulator.ts (FuzzSimulator.applyWaveToPositions)
+via bench/dissolve-with-simulator.ts. Fresh Clues are left empty so the curve is Fuzz Level only.
+Smart Robot calls are user-only, with no extra format system prompt.
 
 One command from the repo root:
   pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
@@ -25,8 +26,8 @@ import importlib.util
 import json
 import os
 import platform
-import random
 import re
+import shutil
 import subprocess
 import sys
 from collections import Counter
@@ -39,6 +40,7 @@ HELPER_SRC = ROOT / "helper" / "src"
 HARNESS_PATH = ROOT / "helper" / "scripts" / "validate-smart-robot-on-dev.py"
 MEMORIES_PATH = ROOT / "bench" / "gs-t6-memories.json"
 DEFAULT_OUTPUT = ROOT / "bench" / "gs-t6-reconstruction-accuracy.json"
+DISSOLVE_HELPER = ROOT / "bench" / "dissolve-with-simulator.ts"
 SEED = 42
 # Eleven points from intact Memory to fully dissolved, enough to see collapse.
 FUZZ_LEVELS = [round(i / 10, 1) for i in range(11)]
@@ -46,10 +48,17 @@ FUZZ_LEVELS = [round(i / 10, 1) for i in range(11)]
 EXCLUDED_MEMORY_IDS = frozenset({"oak-tree"})
 GGUF_REPO = "bartowski/Qwen2.5-7B-Instruct-GGUF"
 GGUF_FILE = "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
-SYSTEM_PROMPT = (
-    "You reconstruct text using exact === STEP 1 === through === STEP 4 === "
-    "then === RECONSTRUCTED MEMORY === markers. Output ONLY the five markers "
-    "with content after each. No preamble. No explanations. No meta-commentary."
+PROMPT_BOILERPLATE_TOKENS = (
+    "Waves",
+    "Fresh Clues",
+    "Endless Fight",
+    "Perfect Help",
+    "Sand Drawing",
+    "Quiet Rewrite",
+    "Feeling Lesson",
+    "Smart Robot",
+    "Cleaning Steps",
+    "Creative Guessing",
 )
 
 sys.path.insert(0, str(HELPER_SRC))
@@ -101,10 +110,7 @@ def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str
 
     def call(prompt: str) -> str:
         result = llm.create_chat_completion(
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
+            messages=[{"role": "user", "content": prompt}],
             max_tokens=harness.MAX_TOKENS,
             temperature=harness.TEMPERATURE,
         )
@@ -188,18 +194,42 @@ def remaining_clue_ratio(original: str, fuzz: str) -> float:
     return same / max(len(original) + extra, 1)
 
 
-def dissolve_memory(original: str, fuzz_level: float, rng: random.Random) -> str:
-    """Replace fuzz_level fraction of characters with '*', same junk as FuzzSimulator."""
-    if fuzz_level <= 0 or not original:
-        return original
-    n = len(original)
-    k = min(n, int(round(fuzz_level * n)))
-    indices = list(range(n))
-    rng.shuffle(indices)
-    chars = list(original)
-    for i in indices[:k]:
-        chars[i] = "*"
-    return "".join(chars)
+def bun_bin() -> str:
+    found = shutil.which("bun")
+    if found:
+        return found
+    home = Path.home() / ".bun" / "bin" / "bun"
+    if home.is_file():
+        return str(home)
+    raise RuntimeError("bun is required to drive box/src/fuzz-simulator.ts")
+
+
+def dissolve_with_product_simulator(
+    original: str, fuzz_level: float, seed: int, memory_id: str
+) -> dict[str, Any]:
+    """Star characters through FuzzSimulator.applyWaveToPositions. No Python starring."""
+    proc = subprocess.run(
+        [bun_bin(), str(DISSOLVE_HELPER)],
+        input=json.dumps(
+            {
+                "original": original,
+                "fuzz_level": fuzz_level,
+                "seed": seed,
+                "memory_id": memory_id,
+            }
+        ),
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        check=False,
+    )
+    if proc.returncode != 0:
+        err = (proc.stderr or proc.stdout or "").strip() or f"exit {proc.returncode}"
+        raise RuntimeError(f"FuzzSimulator dissolve helper failed: {err}")
+    data = json.loads(proc.stdout)
+    if "final_fuzz" not in data:
+        raise RuntimeError("FuzzSimulator dissolve helper returned no final_fuzz")
+    return data
 
 
 def git_sha() -> Optional[str]:
@@ -307,6 +337,37 @@ def print_table(summaries: list[dict[str, Any]]) -> None:
         print(line(row))
 
 
+def boilerplate_tokens_found(text: str) -> list[str]:
+    lower = text.lower()
+    return [tok for tok in PROMPT_BOILERPLATE_TOKENS if tok.lower() in lower]
+
+
+def annotate_fuzz_1_boilerplate(trials: list[dict[str, Any]], summaries: list[dict[str, Any]]) -> None:
+    """If Fuzz 1.0 reconstructions echo locked-prompt glossary tokens, note it. Keep the measured F1."""
+    recon_hits: list[dict[str, Any]] = []
+    for trial in trials:
+        if trial["fuzz_level"] != 1.0 or trial["status"] != "ok":
+            continue
+        recon = trial.get("reconstructed_memory") or ""
+        hits = boilerplate_tokens_found(recon)
+        trial["prompt_boilerplate_tokens"] = hits
+        if hits:
+            recon_hits.append({"memory_id": trial["memory_id"], "tokens": hits})
+    for row in summaries:
+        if row["fuzz_level"] != 1.0:
+            continue
+        if recon_hits:
+            found = sorted({tok for item in recon_hits for tok in item["tokens"]})
+            row["word_f1_note"] = (
+                "prompt-boilerplate regurgitation (locked-prompt tokens like "
+                + ", ".join(found)
+                + "). Measured Word F1 kept."
+            )
+            row["prompt_boilerplate_memories"] = recon_hits
+        else:
+            row["word_f1_note"] = None
+
+
 def summarize(trials: list[dict[str, Any]], levels: list[float]) -> list[dict[str, Any]]:
     out = []
     for level in levels:
@@ -346,16 +407,16 @@ def run_trial(
     call_smart_robot: Callable[[str], str],
     parse_reconstruction: Callable[[str], dict],
 ) -> dict[str, Any]:
-    rng = random.Random(f"{seed}:{memory_id}:{fuzz_level}")
-    fuzz = dissolve_memory(original, fuzz_level, rng)
+    dissolved = dissolve_with_product_simulator(original, fuzz_level, seed, memory_id)
+    fuzz = dissolved["final_fuzz"]
     remaining = remaining_clue_ratio(original, fuzz)
     trial: dict[str, Any] = {
         "memory_id": memory_id,
         "fuzz_level": fuzz_level,
         "final_fuzz": fuzz,
         "remaining_clue_ratio": remaining,
-        "replaced_chars": sum(1 for a, b in zip(original, fuzz) if a != b)
-        + abs(len(original) - len(fuzz)),
+        "replaced_chars": dissolved.get("replaced_chars"),
+        "fuzz_simulator_level": dissolved.get("fuzz_simulator_level"),
         "status": "ok",
         "error": None,
         "raw_output": None,
@@ -447,6 +508,7 @@ def main() -> int:
             DEFAULT_OUTPUT.write_text(json.dumps(payload_so_far, indent=2) + "\n", encoding="utf-8")
 
     by_level = summarize(trials, FUZZ_LEVELS)
+    annotate_fuzz_1_boilerplate(trials, by_level)
     payload = {
         "gate": "GS-T6",
         "title": "Reconstructing accuracy across Fuzz Levels",
@@ -457,6 +519,8 @@ def main() -> int:
         "temperature": harness.TEMPERATURE,
         "max_tokens": harness.MAX_TOKENS,
         "seed": SEED,
+        "chat": "user-only",
+        "starring": "box/src/fuzz-simulator.ts",
         "dataset_size": len(memories),
         "dataset_path": str(MEMORIES_PATH.relative_to(ROOT)),
         "dataset_note": (
@@ -486,6 +550,10 @@ def main() -> int:
     print()
     print_table(by_level)
     n_failed = sum(1 for t in trials if t["status"] != "ok")
+    fuzz_1 = next((row for row in by_level if row["fuzz_level"] == 1.0), None)
+    if fuzz_1 and fuzz_1.get("word_f1_note"):
+        print()
+        print(f"Fuzz 1.0 Word F1 note: {fuzz_1['word_f1_note']}")
     print()
     print(f"Trials: {len(trials)}. Failures: {n_failed}.")
     return 1 if n_failed == len(trials) else 0

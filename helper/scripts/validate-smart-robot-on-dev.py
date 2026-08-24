@@ -114,8 +114,9 @@ def extract_chat_content(result: Any) -> str:
 def call_smart_robot(prompt: str) -> str:
     """One Smart Robot chat call. Raises if the client, token, or response is missing.
 
-    Used by this CLI and by bench/gs_t6_reconstruction_accuracy.py. Does not fall back
-    to empty markers or the sample reconstruction file.
+    Used by this CLI and by bench/gs_t6_reconstruction_accuracy.py. User-only messages,
+    matching play: no extra format system prompt. Does not fall back to empty markers
+    or the sample reconstruction file.
     """
     if InferenceClient is None:
         raise RuntimeError("huggingface_hub is not installed")
@@ -126,17 +127,7 @@ def call_smart_robot(prompt: str) -> str:
     endpoint = os.environ.get("FUZZ_HF_ENDPOINT_URL")
     use_model = endpoint or model
     client = InferenceClient(model=use_model, token=token)
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You reconstruct text using exact === STEP 1 === through === STEP 4 === "
-                "then === RECONSTRUCTED MEMORY === markers. Output ONLY the five markers "
-                "with content after each. No preamble. No explanations. No meta-commentary."
-            ),
-        },
-        {"role": "user", "content": prompt},
-    ]
+    messages = [{"role": "user", "content": prompt}]
     try:
         result = client.chat.completions.create(
             model=use_model,
