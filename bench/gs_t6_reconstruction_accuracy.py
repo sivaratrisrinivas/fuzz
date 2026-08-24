@@ -10,7 +10,11 @@ Dissolving matches box/src/fuzz-simulator.ts: selected characters become '*'.
 Fresh Clues are left empty so the curve is Fuzz Level only.
 
 One command from the repo root:
-  pip install -r helper/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
+  pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
+
+If HF_TOKEN is set, the script uses the same InferenceClient path as the helper.
+If it is not set, the script loads a local Qwen2.5-7B-Instruct Q4_K_M GGUF via llama.cpp
+so the sweep can still run on a clean checkout. The JSON records which backend ran.
 
 Writes bench/gs-t6-reconstruction-accuracy.json and prints a markdown table.
 """
@@ -38,6 +42,13 @@ DEFAULT_OUTPUT = ROOT / "bench" / "gs-t6-reconstruction-accuracy.json"
 SEED = 42
 # Eleven points from intact Memory to fully dissolved, enough to see collapse.
 FUZZ_LEVELS = [round(i / 10, 1) for i in range(11)]
+GGUF_REPO = "bartowski/Qwen2.5-7B-Instruct-GGUF"
+GGUF_FILE = "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+SYSTEM_PROMPT = (
+    "You reconstruct text using exact === STEP 1 === through === STEP 4 === "
+    "then === RECONSTRUCTED MEMORY === markers. Output ONLY the five markers "
+    "with content after each. No preamble. No explanations. No meta-commentary."
+)
 
 sys.path.insert(0, str(HELPER_SRC))
 
@@ -55,6 +66,72 @@ def load_coordinator_class():
     from thin_helper.reconstruct_coordinator import ReconstructCoordinator
 
     return ReconstructCoordinator
+
+
+def hf_token() -> Optional[str]:
+    return os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+
+
+def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str, Any]]:
+    try:
+        from huggingface_hub import hf_hub_download
+        from llama_cpp import Llama
+    except ImportError:
+        print("Installing llama-cpp-python for the local GGUF backend ...", flush=True)
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "llama-cpp-python>=0.3"]
+        )
+        from huggingface_hub import hf_hub_download
+        from llama_cpp import Llama
+
+    print(f"Downloading {GGUF_REPO}/{GGUF_FILE} if needed ...", flush=True)
+    model_path = hf_hub_download(repo_id=GGUF_REPO, filename=GGUF_FILE)
+    n_threads = os.cpu_count() or 4
+    print(f"Loading GGUF from {model_path} with {n_threads} threads ...", flush=True)
+    llm = Llama(
+        model_path=model_path,
+        n_ctx=4096,
+        n_threads=n_threads,
+        n_gpu_layers=0,
+        chat_format="chatml",
+        verbose=False,
+    )
+
+    def call(prompt: str) -> str:
+        result = llm.create_chat_completion(
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=harness.MAX_TOKENS,
+            temperature=harness.TEMPERATURE,
+        )
+        text = harness.extract_chat_content(result)
+        if not str(text).strip():
+            raise RuntimeError("local Smart Robot returned empty text")
+        return str(text)
+
+    meta = {
+        "model_source": "llama_cpp_local_gguf",
+        "gguf_repo": GGUF_REPO,
+        "gguf_file": GGUF_FILE,
+        "gguf_path": model_path,
+        "n_threads": n_threads,
+        "n_ctx": 4096,
+        "n_gpu_layers": 0,
+        "quantization": "Q4_K_M",
+    }
+    return call, meta
+
+
+def resolve_caller(harness: Any) -> tuple[Callable[[str], str], dict[str, Any]]:
+    if hf_token():
+        return harness.call_smart_robot, {
+            "model_source": "huggingface_inference_client",
+            "endpoint": os.environ.get("FUZZ_HF_ENDPOINT_URL") or None,
+        }
+    print("HF_TOKEN is not set. Using local Qwen2.5-7B-Instruct GGUF via llama.cpp.", flush=True)
+    return make_local_gguf_caller(harness)
 
 
 def tokenize(text: str) -> list[str]:
@@ -311,10 +388,12 @@ def main() -> int:
     date_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     hardware = collect_hardware()
     sha = git_sha()
+    caller, source_meta = resolve_caller(harness)
 
     print("GS-T6 Reconstructing accuracy across Fuzz Levels")
     print(f"Closest harness: {HARNESS_PATH.relative_to(ROOT)}")
     print(f"Model: {model_name}")
+    print(f"Model source: {source_meta.get('model_source')}")
     print(f"Date: {date_iso}")
     print(f"Dataset size: {len(memories)} memories")
     print(f"Fuzz levels: {FUZZ_LEVELS}")
@@ -338,7 +417,7 @@ def main() -> int:
                 fuzz_level=level,
                 seed=SEED,
                 build_prompt=harness.build_full_prompt,
-                call_smart_robot=harness.call_smart_robot,
+                call_smart_robot=caller,
                 parse_reconstruction=coordinator.parse_reconstruction,
             )
             if trial["status"] == "ok":
@@ -358,7 +437,8 @@ def main() -> int:
         "title": "Reconstructing accuracy across Fuzz Levels",
         "date": date_iso,
         "model": model_name,
-        "model_source": "huggingface_inference_client",
+        "model_source": source_meta.get("model_source"),
+        "model_source_detail": source_meta,
         "temperature": harness.TEMPERATURE,
         "max_tokens": harness.MAX_TOKENS,
         "seed": SEED,
