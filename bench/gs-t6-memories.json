@@ -1,10 +1,6 @@
 {
-  "description": "GS-T6 Memories for Reconstructing accuracy across Fuzz Levels. oak-tree is the sample from helper/prompts/sample-fight-end-data.json, not held-out. The rest are extra paragraphs of similar length. None of these are player data.",
+  "description": "GS-T6 Memories for Reconstructing accuracy across Fuzz Levels. oak-tree (the helper/prompts/sample-fight-end-data.json validation sample) is excluded. These four extra paragraphs are the evaluation set. None of these are player data.",
   "memories": [
-    {
-      "id": "oak-tree",
-      "text": "The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell."
-    },
     {
       "id": "night-bus",
       "text": "The first time I rode the night bus home from the city the windows were fogged and someone had drawn a small heart in the corner. I kept wiping a circle to watch the streetlights smear past. The driver hummed the same three notes for an hour. When we reached my stop the rain had ended and the pavement smelled like dust."

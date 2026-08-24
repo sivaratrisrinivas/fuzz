@@ -19,25 +19,25 @@ Like drawing in sand at the shore: write something real, watch waves slowly wash
 
 ## Results
 
-GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Five Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json`, not held-out. The other four are extra paragraphs of similar length. The Smart Robot is told to make a Quiet Rewrite, so exact match is 0 even on an intact Memory.
+GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Four Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json` and is excluded from the evaluation set. The Smart Robot is told to make a Quiet Rewrite, so exact match is 0 even on an intact Memory.
 
-Measured on 2026-08-24. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU via llama.cpp. Dataset size 5. Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU. `HF_TOKEN` was not set, so this run used local weights of the same model rather than Hugging Face InferenceClient.
+Measured on 2026-08-24. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU via llama.cpp. Dataset size 4. Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU. `HF_TOKEN` was not set, so this run used local weights of the same model rather than Hugging Face InferenceClient. Table means were recomputed from the committed trial rows after dropping oak-tree. The model was not rerun.
 
 | Fuzz level | Remaining clues | Word F1 | Edit similarity | Exact match | Failures |
 | ---------- | --------------- | ------- | --------------- | ----------- | -------- |
-| 0.0        | 1.000           | 0.817   | 0.752           | 0/5         | 0/5      |
-| 0.1        | 0.900           | 0.847   | 0.871           | 0/5         | 0/5      |
-| 0.2        | 0.801           | 0.669   | 0.735           | 0/5         | 0/5      |
-| 0.3        | 0.700           | 0.329   | 0.662           | 0/5         | 0/5      |
-| 0.4        | 0.600           | 0.370   | 0.559           | 0/4         | 1/5      |
-| 0.5        | 0.500           | 0.132   | 0.455           | 0/5         | 0/5      |
-| 0.6        | 0.400           | 0.128   | 0.353           | 0/4         | 1/5      |
-| 0.7        | 0.300           | 0.101   | 0.271           | 0/4         | 1/5      |
-| 0.8        | 0.199           | 0.101   | 0.191           | 0/5         | 0/5      |
-| 0.9        | 0.100           | 0.068   | 0.128           | 0/5         | 0/5      |
-| 1.0        | 0.000           | 0.193   | 0.274           | 0/5         | 0/5      |
+| 0.0        | 1.000           | 0.828   | 0.753           | 0/4         | 0/4      |
+| 0.1        | 0.900           | 0.849   | 0.873           | 0/4         | 0/4      |
+| 0.2        | 0.800           | 0.704   | 0.722           | 0/4         | 0/4      |
+| 0.3        | 0.700           | 0.297   | 0.656           | 0/4         | 0/4      |
+| 0.4        | 0.600           | 0.301   | 0.585           | 0/3         | 1/4      |
+| 0.5        | 0.500           | 0.152   | 0.458           | 0/4         | 0/4      |
+| 0.6        | 0.400           | 0.141   | 0.376           | 0/3         | 1/4      |
+| 0.7        | 0.300           | 0.122   | 0.262           | 0/3         | 1/4      |
+| 0.8        | 0.200           | 0.115   | 0.190           | 0/4         | 0/4      |
+| 0.9        | 0.100           | 0.078   | 0.135           | 0/4         | 0/4      |
+| 1.0        | 0.000           | 0.204   | 0.280           | 0/4         | 0/4      |
 
-Word F1 stays above 0.66 through Fuzz 0.2, then drops to 0.33 at 0.3 and 0.13 at 0.5. Three of 55 trials returned an empty Reconstructed Memory. Those are failures, not zeros. This committed JSON does not include the raw Smart Robot text for those failures. Later runs write `raw_output` on every trial before parse.
+Word F1 stays above 0.70 through Fuzz 0.2, then drops to 0.297 at 0.3 and 0.152 at 0.5. Three of 44 trials returned an empty Reconstructed Memory. Those are failures, not zeros. This committed JSON does not include the raw Smart Robot text for those failures. Later runs write `raw_output` on every trial before parse.
 
 ```bash
 pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py

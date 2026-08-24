@@ -42,6 +42,8 @@ DEFAULT_OUTPUT = ROOT / "bench" / "gs-t6-reconstruction-accuracy.json"
 SEED = 42
 # Eleven points from intact Memory to fully dissolved, enough to see collapse.
 FUZZ_LEVELS = [round(i / 10, 1) for i in range(11)]
+# Validation sample from helper/prompts/sample-fight-end-data.json. Not in the eval set.
+EXCLUDED_MEMORY_IDS = frozenset({"oak-tree"})
 GGUF_REPO = "bartowski/Qwen2.5-7B-Instruct-GGUF"
 GGUF_FILE = "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
 SYSTEM_PROMPT = (
@@ -387,7 +389,7 @@ def main() -> int:
     ReconstructCoordinator = load_coordinator_class()
     coordinator = ReconstructCoordinator()
     memories_doc = json.loads(MEMORIES_PATH.read_text(encoding="utf-8"))
-    memories = memories_doc["memories"]
+    memories = [m for m in memories_doc["memories"] if m["id"] not in EXCLUDED_MEMORY_IDS]
     model_name = harness.resolved_model_name()
     date_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     hardware = collect_hardware()
@@ -458,9 +460,10 @@ def main() -> int:
         "dataset_size": len(memories),
         "dataset_path": str(MEMORIES_PATH.relative_to(ROOT)),
         "dataset_note": (
-            "oak-tree is the helper/prompts/sample-fight-end-data.json validation sample, "
-            "not held-out. The other four Memories are extra paragraphs."
+            "oak-tree is the helper/prompts/sample-fight-end-data.json validation sample "
+            "and is excluded from the evaluation set."
         ),
+        "excluded_memory_ids": sorted(EXCLUDED_MEMORY_IDS),
         "fresh_clues": [],
         "fresh_clues_note": (
             "Empty on purpose. This sweep isolates Fuzz Level. Player Rewriting is not mixed in."
