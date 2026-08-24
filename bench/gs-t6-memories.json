@@ -1,0 +1,25 @@
+{
+  "description": "GS-T6 held-out Memories for Reconstructing accuracy across Fuzz Levels. The oak tree Memory is the sample from helper/prompts/sample-fight-end-data.json. The rest are extra paragraphs of similar length. None of these are player data.",
+  "memories": [
+    {
+      "id": "oak-tree",
+      "text": "The old oak tree by the river had stood for centuries. Its roots drank from the slow stream that wound through the valley like a silver thread. Birds nested in its high branches and children played under its shade in summer. Every autumn its leaves turned the color of fire before they fell."
+    },
+    {
+      "id": "night-bus",
+      "text": "The first time I rode the night bus home from the city the windows were fogged and someone had drawn a small heart in the corner. I kept wiping a circle to watch the streetlights smear past. The driver hummed the same three notes for an hour. When we reached my stop the rain had ended and the pavement smelled like dust."
+    },
+    {
+      "id": "kitchen-radio",
+      "text": "Sunday mornings the kitchen radio sat on the windowsill above the sink and played the same station my mother trusted. She fried eggs in too much butter and asked if I had slept. The kettle clicked off and the room filled with steam. I still hear that click when a room is too quiet."
+    },
+    {
+      "id": "library-rain",
+      "text": "I used to hide in the back aisle of the public library when it rained so hard the street turned silver. The carpet smelled like old paper and wet coats. I read the same adventure novel until the closing bell rang. The librarian never rushed me even when the lights began to dim."
+    },
+    {
+      "id": "porch-storm",
+      "text": "We sat on the porch and counted the seconds between lightning and thunder until the storm was over the hill. The dog pressed against my knee and would not look at the sky. Afterward the yard steamed and a single chair had blown into the garden. Nobody went out to fetch it until morning."
+    }
+  ]
+}

@@ -20,6 +20,10 @@ This script:
 - Substitutes and (optionally) calls the model
 - Prints the result or can save a new sample-*.md
 
+The callable helpers below (format_fresh_clues, build_full_prompt, call_smart_robot, extract_chat_content)
+are the shared Smart Robot one-call path. GS-T6 reconstruction accuracy in
+bench/gs_t6_reconstruction_accuracy.py imports them rather than growing a second client.
+
 The authoritative artifacts (prompt + samples) live in helper/prompts/ and were validated against the exact 4 Cleaning Steps,
 Fresh Clues usage, Creative Guessing, Quiet Rewrite requirement, parsable marked format, and Feeling Lesson goals
 from PRD #1 and issue #3. See the sample-reconstruction-01.md for a representative captured output.
@@ -30,43 +34,146 @@ All terms are from CONTEXT.md glossary. References: PRD #1, issue #3, ADR-0001, 
 import json
 import os
 from pathlib import Path
+from typing import Any, Optional
 
 try:
     from huggingface_hub import InferenceClient
 except ImportError:
     InferenceClient = None
 
+DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
+MAX_TOKENS = 1200
+TEMPERATURE = 0.7
+
+
+def helper_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
+def load_locked_prompt(base: Optional[Path] = None) -> str:
+    root = base or helper_root()
+    return (root / "prompts" / "smart-robot-prompt.txt").read_text(encoding="utf-8")
+
+
+def load_sample_fight_end(base: Optional[Path] = None) -> dict:
+    root = base or helper_root()
+    with open(root / "prompts" / "sample-fight-end-data.json", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def format_fresh_clues(fresh_clues: list) -> str:
+    clues_lines = []
+    for c in fresh_clues:
+        clues_lines.append(
+            f"- At Fuzz Level {c['fuzz_level']}, spot/position {c['spot']}, fixed the words: {c['words']}"
+        )
+    return "\n".join(clues_lines)
+
+
+def build_full_prompt(
+    final_fuzz: str,
+    fresh_clues: list,
+    prompt_template: Optional[str] = None,
+) -> str:
+    template = prompt_template if prompt_template is not None else load_locked_prompt()
+    return template.replace("{FINAL_FUZZ}", final_fuzz).replace(
+        "{FRESH_CLUES}", format_fresh_clues(fresh_clues)
+    )
+
+
+def resolved_model_name() -> str:
+    return os.environ.get("FUZZ_SMART_ROBOT_MODEL", DEFAULT_MODEL)
+
+
+def extract_chat_content(result: Any) -> str:
+    if isinstance(result, str):
+        return result
+    choices = getattr(result, "choices", None)
+    if choices and len(choices) > 0:
+        first_choice = choices[0]
+        message = getattr(first_choice, "message", None)
+        if message is not None:
+            content = getattr(message, "content", None)
+            if content is not None:
+                return str(content)
+            if isinstance(message, dict):
+                content = message.get("content")
+                if content is not None:
+                    return str(content)
+    if isinstance(result, dict):
+        dict_choices = result.get("choices") or []
+        if dict_choices:
+            message = dict_choices[0].get("message", {})
+            content = message.get("content")
+            if content is not None:
+                return str(content)
+        return str(result)
+    return str(result)
+
+
+def call_smart_robot(prompt: str) -> str:
+    """One Smart Robot chat call. Raises if the client, token, or response is missing.
+
+    Used by this CLI and by bench/gs_t6_reconstruction_accuracy.py. Does not fall back
+    to empty markers or the sample reconstruction file.
+    """
+    if InferenceClient is None:
+        raise RuntimeError("huggingface_hub is not installed")
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+    if not token:
+        raise RuntimeError("HF_TOKEN is not set")
+    model = resolved_model_name()
+    endpoint = os.environ.get("FUZZ_HF_ENDPOINT_URL")
+    use_model = endpoint or model
+    client = InferenceClient(model=use_model, token=token)
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You reconstruct text using exact === STEP 1 === through === STEP 4 === "
+                "then === RECONSTRUCTED MEMORY === markers. Output ONLY the five markers "
+                "with content after each. No preamble. No explanations. No meta-commentary."
+            ),
+        },
+        {"role": "user", "content": prompt},
+    ]
+    try:
+        result = client.chat.completions.create(
+            model=use_model,
+            messages=messages,
+            max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+        )
+        text = extract_chat_content(result)
+    except (AttributeError, TypeError):
+        result = client.chat_completion(
+            messages=messages,
+            max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+        )
+        text = extract_chat_content(result)
+    if not str(text).strip():
+        raise RuntimeError("Smart Robot returned empty text")
+    return str(text)
+
 
 def main():
-    base = Path(__file__).resolve().parent.parent
+    base = helper_root()
     prompt_path = base / "prompts" / "smart-robot-prompt.txt"
     data_path = base / "prompts" / "sample-fight-end-data.json"
 
     print("=== Fuzz Smart Robot Prompt Validation (dev tools / ZeroGPU / Pro only) ===")
     print(f"Using locked prompt: {prompt_path}")
     print(f"Using sample data: {data_path}")
-    print("Model target: Qwen/Qwen2.5-7B-Instruct (per handoff model selection)")
+    print(f"Model target: {resolved_model_name()} (per handoff model selection)")
     print("Constraint: ZeroGPU/Pro for iteration. No nvidia-l4 production calls.\n")
 
-    prompt_template = prompt_path.read_text(encoding="utf-8")
-    with open(data_path, encoding="utf-8") as f:
-        sample = json.load(f)
-
-    final_fuzz = sample["final_fuzz"]
-    fresh_clues = sample["fresh_clues"]
-
-    # Format the Fresh Clues section as simple readable list for the prompt.
-    clues_lines = []
-    for c in fresh_clues:
-        clues_lines.append(f"- At Fuzz Level {c['fuzz_level']}, spot/position {c['spot']}, fixed the words: {c['words']}")
-    fresh_clues_text = "\n".join(clues_lines)
-
-    full_prompt = prompt_template.replace("{FINAL_FUZZ}", final_fuzz).replace("{FRESH_CLUES}", fresh_clues_text)
+    sample = load_sample_fight_end(base)
+    full_prompt = build_full_prompt(sample["final_fuzz"], sample["fresh_clues"])
 
     print("--- Formatted prompt (first 800 chars) ---")
     print(full_prompt[:800] + "...\n")
 
-    # Attempt actual call if client and token available (dev only).
     token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
     if InferenceClient is None or not token:
         print("No huggingface_hub client or HF_TOKEN in env.")
@@ -78,17 +185,10 @@ def main():
         print("It was produced following the exact locked prompt + data and demonstrates the required properties.")
         return
 
-    print("Attempting InferenceClient call to Qwen/Qwen2.5-7B-Instruct (text-only instruct, ~4s latency, good format adherence).")
+    print(f"Attempting InferenceClient call to {resolved_model_name()} (text-only instruct, ~4s latency, good format adherence).")
     print("If it fails or is slow, fall back to a dedicated ZeroGPU Space as noted above.\n")
 
-    client = InferenceClient(model="Qwen/Qwen2.5-7B-Instruct", token=token)
-    # Conservative generation params for structured multi-step instruction following.
-    result = client.chat_completion(
-        messages=[{"role": "user", "content": full_prompt}],
-        max_tokens=1200,
-        temperature=0.7,
-    )
-    result_text = result.choices[0].message.content
+    result_text = call_smart_robot(full_prompt)
     print("=== Raw model response (truncated for console) ===")
     print(result_text[:2000] if len(result_text) > 2000 else result_text)
     print("\n(If good, copy relevant sections into a new sample-*.md following the format of sample-reconstruction-01.md)")
