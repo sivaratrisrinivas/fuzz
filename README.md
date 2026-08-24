@@ -43,7 +43,7 @@ Word F1 stays above 0.66 through Fuzz 0.2, then drops to 0.33 at 0.3 and 0.13 at
 pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
 ```
 
-Raw output is committed at `bench/gs-t6-reconstruction-accuracy.json`.
+The result file is `bench/gs-t6-reconstruction-accuracy.json`.
 
 ## Play it
 
