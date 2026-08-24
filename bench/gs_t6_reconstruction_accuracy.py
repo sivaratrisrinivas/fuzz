@@ -430,6 +430,15 @@ def main() -> int:
             else:
                 print(f"  FAILED {trial['error']}", flush=True)
             trials.append(trial)
+            payload_so_far = {
+                "gate": "GS-T6",
+                "status": "in_progress",
+                "trials_done": done,
+                "trials_total": total,
+                "by_fuzz_level": summarize(trials, FUZZ_LEVELS),
+                "trials": trials,
+            }
+            DEFAULT_OUTPUT.write_text(json.dumps(payload_so_far, indent=2) + "\n", encoding="utf-8")
 
     by_level = summarize(trials, FUZZ_LEVELS)
     payload = {
