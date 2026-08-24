@@ -356,14 +356,17 @@ def run_trial(
         + abs(len(original) - len(fuzz)),
         "status": "ok",
         "error": None,
+        "raw_output": None,
         "reconstructed_memory": None,
         "word_f1": None,
         "edit_similarity": None,
         "exact_match": None,
     }
+    raw = None
     try:
         prompt = build_prompt(fuzz, [])
         raw = call_smart_robot(prompt)
+        trial["raw_output"] = raw
         parsed = parse_reconstruction(raw)
         recon = (parsed.get("reconstructed_memory") or "").strip()
         if not recon:
@@ -373,6 +376,7 @@ def run_trial(
         trial["edit_similarity"] = edit_similarity(original, recon)
         trial["exact_match"] = original.strip() == recon
     except Exception as exc:
+        trial["raw_output"] = raw
         trial["status"] = "failed"
         trial["error"] = f"{type(exc).__name__}: {exc}"
     return trial
@@ -453,6 +457,10 @@ def main() -> int:
         "seed": SEED,
         "dataset_size": len(memories),
         "dataset_path": str(MEMORIES_PATH.relative_to(ROOT)),
+        "dataset_note": (
+            "oak-tree is the helper/prompts/sample-fight-end-data.json validation sample, "
+            "not held-out. The other four Memories are extra paragraphs."
+        ),
         "fresh_clues": [],
         "fresh_clues_note": (
             "Empty on purpose. This sweep isolates Fuzz Level. Player Rewriting is not mixed in."

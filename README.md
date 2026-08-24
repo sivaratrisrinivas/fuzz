@@ -19,7 +19,7 @@ Like drawing in sand at the shore: write something real, watch waves slowly wash
 
 ## Results
 
-GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Five held-out Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. The Smart Robot is told to make a Quiet Rewrite, so exact match is 0 even on an intact Memory.
+GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Five Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json`, not held-out. The other four are extra paragraphs of similar length. The Smart Robot is told to make a Quiet Rewrite, so exact match is 0 even on an intact Memory.
 
 Measured on 2026-08-24. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU via llama.cpp. Dataset size 5. Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU. `HF_TOKEN` was not set, so this run used local weights of the same model rather than Hugging Face InferenceClient.
 
@@ -37,7 +37,7 @@ Measured on 2026-08-24. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU
 | 0.9        | 0.100           | 0.068   | 0.128           | 0/5         | 0/5      |
 | 1.0        | 0.000           | 0.193   | 0.274           | 0/5         | 0/5      |
 
-Word F1 stays above 0.66 through Fuzz 0.2, then drops to 0.33 at 0.3 and 0.13 at 0.5. Three of 55 trials returned an empty Reconstructed Memory. Those are failures, not zeros.
+Word F1 stays above 0.66 through Fuzz 0.2, then drops to 0.33 at 0.3 and 0.13 at 0.5. Three of 55 trials returned an empty Reconstructed Memory. Those are failures, not zeros. This committed JSON does not include the raw Smart Robot text for those failures. Later runs write `raw_output` on every trial before parse.
 
 ```bash
 pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py

@@ -19,6 +19,8 @@
   "seed": 42,
   "dataset_size": 5,
   "dataset_path": "bench/gs-t6-memories.json",
+  "dataset_note": "oak-tree is the helper/prompts/sample-fight-end-data.json validation sample, not held-out. The other four Memories are extra paragraphs.",
+  "raw_output_note": "This run did not persist raw Smart Robot text. The three empty-parse failures cannot be audited from this file. Later runs write raw_output on every trial before parse.",
   "fresh_clues": [],
   "fresh_clues_note": "Empty on purpose. This sweep isolates Fuzz Level. Player Rewriting is not mixed in.",
   "quiet_rewrite_note": "The locked prompt asks for a Quiet Rewrite, so exact match can stay low even when Fuzz is light.",

@@ -1,5 +1,5 @@
 {
-  "description": "GS-T6 held-out Memories for Reconstructing accuracy across Fuzz Levels. The oak tree Memory is the sample from helper/prompts/sample-fight-end-data.json. The rest are extra paragraphs of similar length. None of these are player data.",
+  "description": "GS-T6 Memories for Reconstructing accuracy across Fuzz Levels. oak-tree is the sample from helper/prompts/sample-fight-end-data.json, not held-out. The rest are extra paragraphs of similar length. None of these are player data.",
   "memories": [
     {
       "id": "oak-tree",
