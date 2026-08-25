@@ -1,0 +1,21 @@
+{
+  "description": "GS-T6 Memories for Reconstructing accuracy across Fuzz Levels. oak-tree (the helper/prompts/sample-fight-end-data.json validation sample) is excluded. These four extra paragraphs are the evaluation set. None of these are player data.",
+  "memories": [
+    {
+      "id": "night-bus",
+      "text": "The first time I rode the night bus home from the city the windows were fogged and someone had drawn a small heart in the corner. I kept wiping a circle to watch the streetlights smear past. The driver hummed the same three notes for an hour. When we reached my stop the rain had ended and the pavement smelled like dust."
+    },
+    {
+      "id": "kitchen-radio",
+      "text": "Sunday mornings the kitchen radio sat on the windowsill above the sink and played the same station my mother trusted. She fried eggs in too much butter and asked if I had slept. The kettle clicked off and the room filled with steam. I still hear that click when a room is too quiet."
+    },
+    {
+      "id": "library-rain",
+      "text": "I used to hide in the back aisle of the public library when it rained so hard the street turned silver. The carpet smelled like old paper and wet coats. I read the same adventure novel until the closing bell rang. The librarian never rushed me even when the lights began to dim."
+    },
+    {
+      "id": "porch-storm",
+      "text": "We sat on the porch and counted the seconds between lightning and thunder until the storm was over the hill. The dog pressed against my knee and would not look at the sky. Afterward the yard steamed and a single chair had blown into the garden. Nobody went out to fetch it until morning."
+    }
+  ]
+}

@@ -1,0 +1,600 @@
+#!/usr/bin/env python3
+"""GS-T6: Reconstructing accuracy across Fuzz Levels.
+
+Closest harness: helper/scripts/validate-smart-robot-on-dev.py
+This script imports that file's one-call helpers (prompt build + Smart Robot chat)
+and scores the Reconstructed Memory with ReconstructCoordinator.parse_reconstruction,
+the same parser the thin helper uses in play.
+
+Dissolving is driven by box/src/fuzz-simulator.ts (FuzzSimulator.applyWaveToPositions)
+via bench/dissolve-with-simulator.ts. Fresh Clues are left empty so the curve is Fuzz Level only.
+Smart Robot calls are user-only, with no extra format system prompt on this bench caller.
+Play still sends a format system prompt in ReconstructCoordinator._default_model_caller,
+so these numbers are not production-identical.
+
+One command from the repo root:
+  pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
+
+If HF_TOKEN is set, the script uses the same InferenceClient path as the helper.
+If it is not set, the script loads a local Qwen2.5-7B-Instruct Q4_K_M GGUF via llama.cpp
+so the sweep can still run on a clean checkout. The JSON records which backend ran.
+
+Writes bench/gs-t6-reconstruction-accuracy.json and prints a markdown table.
+"""
+
+from __future__ import annotations
+
+import importlib.util
+import json
+import os
+import platform
+import re
+import shutil
+import subprocess
+import sys
+from collections import Counter
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable, Optional
+
+ROOT = Path(__file__).resolve().parent.parent
+HELPER_SRC = ROOT / "helper" / "src"
+HARNESS_PATH = ROOT / "helper" / "scripts" / "validate-smart-robot-on-dev.py"
+MEMORIES_PATH = ROOT / "bench" / "gs-t6-memories.json"
+DEFAULT_OUTPUT = ROOT / "bench" / "gs-t6-reconstruction-accuracy.json"
+DISSOLVE_HELPER = ROOT / "bench" / "dissolve-with-simulator.ts"
+SEED = 42
+# Eleven points from intact Memory to fully dissolved, enough to see collapse.
+FUZZ_LEVELS = [round(i / 10, 1) for i in range(11)]
+# Validation sample from helper/prompts/sample-fight-end-data.json. Not in the eval set.
+EXCLUDED_MEMORY_IDS = frozenset({"oak-tree"})
+GGUF_REPO = "bartowski/Qwen2.5-7B-Instruct-GGUF"
+GGUF_FILE = "Qwen2.5-7B-Instruct-Q4_K_M.gguf"
+PROMPT_BOILERPLATE_TOKENS = (
+    "Waves",
+    "Fresh Clues",
+    "Endless Fight",
+    "Perfect Help",
+    "Sand Drawing",
+    "Quiet Rewrite",
+    "Feeling Lesson",
+    "Smart Robot",
+    "Cleaning Steps",
+    "Creative Guessing",
+)
+
+sys.path.insert(0, str(HELPER_SRC))
+
+
+def load_harness():
+    spec = importlib.util.spec_from_file_location("validate_smart_robot_on_dev", HARNESS_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load closest harness at {HARNESS_PATH}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def load_coordinator_class():
+    from thin_helper.reconstruct_coordinator import ReconstructCoordinator
+
+    return ReconstructCoordinator
+
+
+def hf_token() -> Optional[str]:
+    return os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
+
+
+def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str, Any]]:
+    try:
+        from huggingface_hub import hf_hub_download
+        from llama_cpp import Llama
+        from llama_cpp.llama_chat_format import Jinja2ChatFormatter
+    except ImportError:
+        print("Installing llama-cpp-python for the local GGUF backend ...", flush=True)
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "llama-cpp-python>=0.3"]
+        )
+        from huggingface_hub import hf_hub_download
+        from llama_cpp import Llama
+        from llama_cpp.llama_chat_format import Jinja2ChatFormatter
+
+    print(f"Downloading {GGUF_REPO}/{GGUF_FILE} if needed ...", flush=True)
+    model_path = hf_hub_download(repo_id=GGUF_REPO, filename=GGUF_FILE)
+    n_threads = os.cpu_count() or 4
+    print(f"Loading GGUF from {model_path} with {n_threads} threads ...", flush=True)
+    # User-only ChatML. Do not use chat_format="chatml" or the GGUF default template:
+    # both prepend a format-only system turn (empty system block or "helpful assistant").
+    user_only_formatter = Jinja2ChatFormatter(
+        template=(
+            "{% for message in messages %}"
+            "{% if message['role'] != 'system' %}"
+            "<|im_start|>{{ message['role'] }}\n{{ message['content'] }}<|im_end|>\n"
+            "{% endif %}"
+            "{% endfor %}"
+            "<|im_start|>assistant\n"
+        ),
+        eos_token="<|im_end|>",
+        bos_token="",
+    )
+    llm = Llama(
+        model_path=model_path,
+        n_ctx=4096,
+        n_threads=n_threads,
+        n_gpu_layers=0,
+        chat_handler=user_only_formatter.to_chat_handler(),
+        verbose=False,
+    )
+
+    def call(prompt: str) -> str:
+        result = llm.create_chat_completion(
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=harness.MAX_TOKENS,
+            temperature=harness.TEMPERATURE,
+        )
+        # Return the extracted text, including empty. run_trial persists it, then
+        # marks empty or parse failures as failed. Do not raise here or raw_output
+        # is stored as null.
+        return str(harness.extract_chat_content(result))
+
+    meta = {
+        "model_source": "llama_cpp_local_gguf",
+        "gguf_repo": GGUF_REPO,
+        "gguf_file": GGUF_FILE,
+        "gguf_path": model_path,
+        "n_threads": n_threads,
+        "n_ctx": 4096,
+        "n_gpu_layers": 0,
+        "quantization": "Q4_K_M",
+        "chat": "user-only",
+        "chat_note": (
+            "create_chat_completion with a user message only. No format-only system prompt. "
+            "Custom ChatML handler, not llama.cpp chatml or the GGUF default template. "
+            "Not production-identical: ReconstructCoordinator._default_model_caller still "
+            "sends a format system prompt."
+        ),
+    }
+    return call, meta
+
+
+def resolve_caller(harness: Any) -> tuple[Callable[[str], str], dict[str, Any]]:
+    if hf_token():
+        return harness.call_smart_robot, {
+            "model_source": "huggingface_inference_client",
+            "endpoint": os.environ.get("FUZZ_HF_ENDPOINT_URL") or None,
+            "chat": "user-only",
+            "chat_note": (
+                "create_chat_completion with a user message only. No format-only system prompt. "
+                "Not production-identical: ReconstructCoordinator._default_model_caller still "
+                "sends a format system prompt."
+            ),
+        }
+    print("HF_TOKEN is not set. Using local Qwen2.5-7B-Instruct GGUF via llama.cpp.", flush=True)
+    return make_local_gguf_caller(harness)
+
+
+def tokenize(text: str) -> list[str]:
+    return re.findall(r"[A-Za-z0-9']+", text.lower())
+
+
+def bag_f1(original: str, reconstructed: str) -> float:
+    orig = tokenize(original)
+    recon = tokenize(reconstructed)
+    if not orig and not recon:
+        return 1.0
+    if not orig or not recon:
+        return 0.0
+    overlap = sum((Counter(orig) & Counter(recon)).values())
+    precision = overlap / max(len(recon), 1)
+    recall = overlap / max(len(orig), 1)
+    if precision + recall == 0:
+        return 0.0
+    return 2 * precision * recall / (precision + recall)
+
+
+def levenshtein(a: str, b: str) -> int:
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, start=1):
+        cur = [i]
+        for j, cb in enumerate(b, start=1):
+            ins = cur[j - 1] + 1
+            delete = prev[j] + 1
+            sub = prev[j - 1] + (0 if ca == cb else 1)
+            cur.append(min(ins, delete, sub))
+        prev = cur
+    return prev[-1]
+
+
+def edit_similarity(original: str, reconstructed: str) -> float:
+    denom = max(len(original), len(reconstructed), 1)
+    return 1.0 - (levenshtein(original, reconstructed) / denom)
+
+
+def remaining_clue_ratio(original: str, fuzz: str) -> float:
+    if not original:
+        return 1.0
+    n = min(len(original), len(fuzz))
+    same = sum(1 for i in range(n) if original[i] == fuzz[i])
+    extra = abs(len(original) - len(fuzz))
+    return same / max(len(original) + extra, 1)
+
+
+def bun_bin() -> str:
+    found = shutil.which("bun")
+    if found:
+        return found
+    home = Path.home() / ".bun" / "bin" / "bun"
+    if home.is_file():
+        return str(home)
+    raise RuntimeError("bun is required to drive box/src/fuzz-simulator.ts")
+
+
+def dissolve_with_product_simulator(
+    original: str, fuzz_level: float, seed: int, memory_id: str
+) -> dict[str, Any]:
+    """Star characters through FuzzSimulator.applyWaveToPositions. No Python starring."""
+    proc = subprocess.run(
+        [bun_bin(), str(DISSOLVE_HELPER)],
+        input=json.dumps(
+            {
+                "original": original,
+                "fuzz_level": fuzz_level,
+                "seed": seed,
+                "memory_id": memory_id,
+            }
+        ),
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        check=False,
+    )
+    if proc.returncode != 0:
+        err = (proc.stderr or proc.stdout or "").strip() or f"exit {proc.returncode}"
+        raise RuntimeError(f"FuzzSimulator dissolve helper failed: {err}")
+    data = json.loads(proc.stdout)
+    if "final_fuzz" not in data:
+        raise RuntimeError("FuzzSimulator dissolve helper returned no final_fuzz")
+    return data
+
+
+def git_sha() -> Optional[str]:
+    try:
+        return (
+            subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+
+
+def cpu_model() -> str:
+    try:
+        with open("/proc/cpuinfo", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("model name"):
+                    return line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    return platform.processor() or "unknown"
+
+
+def memory_gb() -> Optional[float]:
+    try:
+        with open("/proc/meminfo", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith("MemTotal:"):
+                    kb = float(line.split()[1])
+                    return round(kb / (1024 * 1024), 2)
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
+def gpu_name() -> str:
+    try:
+        out = subprocess.check_output(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+        return out.splitlines()[0] if out else "none"
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return "none"
+
+
+def collect_hardware() -> dict[str, Any]:
+    return {
+        "platform": platform.platform(),
+        "python": platform.python_version(),
+        "cpu": cpu_model(),
+        "cpu_count": os.cpu_count(),
+        "memory_gb": memory_gb(),
+        "gpu": gpu_name(),
+    }
+
+
+def mean(values: list[float]) -> Optional[float]:
+    if not values:
+        return None
+    return sum(values) / len(values)
+
+
+def fmt(value: Optional[float], digits: int = 3) -> str:
+    if value is None:
+        return "n/a"
+    return f"{value:.{digits}f}"
+
+
+def print_table(summaries: list[dict[str, Any]]) -> None:
+    headers = [
+        "Fuzz level",
+        "Remaining clues",
+        "Word F1",
+        "Edit similarity",
+        "Exact match",
+        "Failures",
+    ]
+    rows = []
+    for row in summaries:
+        n = row["n"]
+        n_ok = row["n_ok"]
+        exact = row["exact_match_count"]
+        rows.append(
+            [
+                f"{row['fuzz_level']:.1f}",
+                fmt(row["mean_remaining_clue_ratio"]),
+                fmt(row["mean_word_f1"]),
+                fmt(row["mean_edit_similarity"]),
+                f"{exact}/{n_ok}" if n_ok else f"0/{n_ok}",
+                f"{row['n_failed']}/{n}",
+            ]
+        )
+    widths = [len(h) for h in headers]
+    for row in rows:
+        for i, cell in enumerate(row):
+            widths[i] = max(widths[i], len(cell))
+
+    def line(cells: list[str], sep: str = " | ") -> str:
+        return "| " + sep.join(cell.ljust(widths[i]) for i, cell in enumerate(cells)) + " |"
+
+    print(line(headers))
+    print("| " + " | ".join("-" * w for w in widths) + " |")
+    for row in rows:
+        print(line(row))
+
+
+def boilerplate_tokens_found(text: str) -> list[str]:
+    lower = text.lower()
+    return [tok for tok in PROMPT_BOILERPLATE_TOKENS if tok.lower() in lower]
+
+
+def annotate_fuzz_1_boilerplate(trials: list[dict[str, Any]], summaries: list[dict[str, Any]]) -> None:
+    """If Fuzz 1.0 reconstructions echo locked-prompt glossary tokens, note it. Keep the measured F1."""
+    recon_hits: list[dict[str, Any]] = []
+    for trial in trials:
+        if trial["fuzz_level"] != 1.0 or trial["status"] != "ok":
+            continue
+        recon = trial.get("reconstructed_memory") or ""
+        hits = boilerplate_tokens_found(recon)
+        trial["prompt_boilerplate_tokens"] = hits
+        if hits:
+            recon_hits.append({"memory_id": trial["memory_id"], "tokens": hits})
+    for row in summaries:
+        if row["fuzz_level"] != 1.0:
+            continue
+        if recon_hits:
+            found = sorted({tok for item in recon_hits for tok in item["tokens"]})
+            row["word_f1_note"] = (
+                "prompt-boilerplate regurgitation (locked-prompt tokens like "
+                + ", ".join(found)
+                + "). Measured Word F1 kept."
+            )
+            row["prompt_boilerplate_memories"] = recon_hits
+        else:
+            row["word_f1_note"] = None
+
+
+def summarize(trials: list[dict[str, Any]], levels: list[float]) -> list[dict[str, Any]]:
+    out = []
+    for level in levels:
+        subset = [t for t in trials if t["fuzz_level"] == level]
+        ok = [t for t in subset if t["status"] == "ok"]
+        failed = [t for t in subset if t["status"] != "ok"]
+        out.append(
+            {
+                "fuzz_level": level,
+                "n": len(subset),
+                "n_ok": len(ok),
+                "n_failed": len(failed),
+                "mean_remaining_clue_ratio": mean(
+                    [t["remaining_clue_ratio"] for t in subset]
+                ),
+                "mean_word_f1": mean([t["word_f1"] for t in ok if t["word_f1"] is not None]),
+                "mean_edit_similarity": mean(
+                    [t["edit_similarity"] for t in ok if t["edit_similarity"] is not None]
+                ),
+                "exact_match_count": sum(1 for t in ok if t["exact_match"]),
+                "exact_match_rate": (
+                    sum(1 for t in ok if t["exact_match"]) / len(ok) if ok else None
+                ),
+                "errors": [t["error"] for t in failed],
+            }
+        )
+    return out
+
+
+def run_trial(
+    *,
+    memory_id: str,
+    original: str,
+    fuzz_level: float,
+    seed: int,
+    build_prompt: Callable[..., str],
+    call_smart_robot: Callable[[str], str],
+    parse_reconstruction: Callable[[str], dict],
+) -> dict[str, Any]:
+    dissolved = dissolve_with_product_simulator(original, fuzz_level, seed, memory_id)
+    fuzz = dissolved["final_fuzz"]
+    remaining = remaining_clue_ratio(original, fuzz)
+    trial: dict[str, Any] = {
+        "memory_id": memory_id,
+        "fuzz_level": fuzz_level,
+        "final_fuzz": fuzz,
+        "remaining_clue_ratio": remaining,
+        "replaced_chars": dissolved.get("replaced_chars"),
+        "fuzz_simulator_level": dissolved.get("fuzz_simulator_level"),
+        "status": "ok",
+        "error": None,
+        "raw_output": None,
+        "reconstructed_memory": None,
+        "word_f1": None,
+        "edit_similarity": None,
+        "exact_match": None,
+    }
+    raw = None
+    try:
+        prompt = build_prompt(fuzz, [])
+        raw = call_smart_robot(prompt)
+        trial["raw_output"] = raw
+        if not str(raw).strip():
+            raise RuntimeError("Smart Robot returned empty text")
+        parsed = parse_reconstruction(raw)
+        recon = (parsed.get("reconstructed_memory") or "").strip()
+        if not recon:
+            raise RuntimeError("parsed reconstructed_memory was empty")
+        trial["reconstructed_memory"] = recon
+        trial["word_f1"] = bag_f1(original, recon)
+        trial["edit_similarity"] = edit_similarity(original, recon)
+        trial["exact_match"] = original.strip() == recon
+    except Exception as exc:
+        trial["raw_output"] = raw
+        trial["status"] = "failed"
+        trial["error"] = f"{type(exc).__name__}: {exc}"
+    return trial
+
+
+def main() -> int:
+    harness = load_harness()
+    ReconstructCoordinator = load_coordinator_class()
+    coordinator = ReconstructCoordinator()
+    memories_doc = json.loads(MEMORIES_PATH.read_text(encoding="utf-8"))
+    memories = [m for m in memories_doc["memories"] if m["id"] not in EXCLUDED_MEMORY_IDS]
+    model_name = harness.resolved_model_name()
+    date_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    hardware = collect_hardware()
+    sha = git_sha()
+    caller, source_meta = resolve_caller(harness)
+
+    print("GS-T6 Reconstructing accuracy across Fuzz Levels")
+    print(f"Closest harness: {HARNESS_PATH.relative_to(ROOT)}")
+    print(f"Model: {model_name}")
+    print(f"Model source: {source_meta.get('model_source')}")
+    print(f"Date: {date_iso}")
+    print(f"Dataset size: {len(memories)} memories")
+    print(f"Fuzz levels: {FUZZ_LEVELS}")
+    print(f"Hardware: {hardware}")
+    print(f"Git SHA: {sha}")
+    print()
+
+    trials: list[dict[str, Any]] = []
+    total = len(memories) * len(FUZZ_LEVELS)
+    done = 0
+    for mem in memories:
+        for level in FUZZ_LEVELS:
+            done += 1
+            print(
+                f"[{done}/{total}] memory={mem['id']} fuzz_level={level:.1f} ...",
+                flush=True,
+            )
+            trial = run_trial(
+                memory_id=mem["id"],
+                original=mem["text"],
+                fuzz_level=level,
+                seed=SEED,
+                build_prompt=harness.build_full_prompt,
+                call_smart_robot=caller,
+                parse_reconstruction=coordinator.parse_reconstruction,
+            )
+            if trial["status"] == "ok":
+                print(
+                    f"  ok word_f1={fmt(trial['word_f1'])} "
+                    f"edit={fmt(trial['edit_similarity'])} "
+                    f"remaining={fmt(trial['remaining_clue_ratio'])}",
+                    flush=True,
+                )
+            else:
+                print(f"  FAILED {trial['error']}", flush=True)
+            trials.append(trial)
+            payload_so_far = {
+                "gate": "GS-T6",
+                "status": "in_progress",
+                "trials_done": done,
+                "trials_total": total,
+                "by_fuzz_level": summarize(trials, FUZZ_LEVELS),
+                "trials": trials,
+            }
+            DEFAULT_OUTPUT.write_text(json.dumps(payload_so_far, indent=2) + "\n", encoding="utf-8")
+
+    by_level = summarize(trials, FUZZ_LEVELS)
+    annotate_fuzz_1_boilerplate(trials, by_level)
+    payload = {
+        "gate": "GS-T6",
+        "title": "Reconstructing accuracy across Fuzz Levels",
+        "date": date_iso,
+        "model": model_name,
+        "model_source": source_meta.get("model_source"),
+        "model_source_detail": source_meta,
+        "temperature": harness.TEMPERATURE,
+        "max_tokens": harness.MAX_TOKENS,
+        "seed": SEED,
+        "chat": "user-only",
+        "chat_play_note": (
+            "User-only GS-T6 calls are not production-identical. "
+            "ReconstructCoordinator._default_model_caller still sends a format system prompt."
+        ),
+        "starring": "box/src/fuzz-simulator.ts",
+        "dataset_size": len(memories),
+        "dataset_path": str(MEMORIES_PATH.relative_to(ROOT)),
+        "dataset_note": (
+            "oak-tree is the helper/prompts/sample-fight-end-data.json validation sample "
+            "and is excluded from the evaluation set."
+        ),
+        "excluded_memory_ids": sorted(EXCLUDED_MEMORY_IDS),
+        "fresh_clues": [],
+        "fresh_clues_note": (
+            "Empty on purpose. This sweep isolates Fuzz Level. Player Rewriting is not mixed in."
+        ),
+        "quiet_rewrite_note": (
+            "The locked prompt asks for a Quiet Rewrite, so exact match can stay low even when Fuzz is light."
+        ),
+        "hardware": hardware,
+        "git_sha": sha,
+        "closest_harness": str(HARNESS_PATH.relative_to(ROOT)),
+        "fuzz_levels": FUZZ_LEVELS,
+        "by_fuzz_level": by_level,
+        "trials": trials,
+    }
+    DEFAULT_OUTPUT.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    print()
+    print(f"Wrote {DEFAULT_OUTPUT.relative_to(ROOT)}")
+    print()
+    print("## Results")
+    print()
+    print_table(by_level)
+    n_failed = sum(1 for t in trials if t["status"] != "ok")
+    fuzz_1 = next((row for row in by_level if row["fuzz_level"] == 1.0), None)
+    if fuzz_1 and fuzz_1.get("word_f1_note"):
+        print()
+        print(f"Fuzz 1.0 Word F1 note: {fuzz_1['word_f1_note']}")
+    print()
+    print(f"Trials: {len(trials)}. Failures: {n_failed}.")
+    return 1 if n_failed == len(trials) else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

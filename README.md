@@ -17,6 +17,34 @@ Like drawing in sand at the shore: write something real, watch waves slowly wash
 
 **Privacy.** Your original text never leaves your browser. Only the scrambled version goes to the server. After one guess, the server forgets everything.
 
+## Results
+
+GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Four Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json` and is excluded from the evaluation set. Starring uses `box/src/fuzz-simulator.ts`. Smart Robot calls are user-only chat_completion, with no extra format system prompt on the bench caller or the GGUF ChatML handler. Play still sends a format system prompt in ReconstructCoordinator, so these numbers are not production-identical. The locked prompt asks for a Quiet Rewrite, so exact match is 0 even on an intact Memory.
+
+Measured on 2026-08-25. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU via llama.cpp. Dataset size 4. Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU. `HF_TOKEN` was not set, so this run used local weights of the same model rather than Hugging Face InferenceClient.
+
+| Fuzz level | Remaining clues | Word F1 | Edit similarity | Exact match | Failures |
+| ---------- | --------------- | ------- | --------------- | ----------- | -------- |
+| 0.0        | 1.000           | 0.876   | 0.836           | 0/4         | 0/4      |
+| 0.1        | 0.900           | 0.717   | 0.628           | 0/4         | 0/4      |
+| 0.2        | 0.800           | 0.757   | 0.823           | 0/2         | 2/4      |
+| 0.3        | 0.700           | 0.432   | 0.567           | 0/4         | 0/4      |
+| 0.4        | 0.600           | 0.243   | 0.335           | 0/3         | 1/4      |
+| 0.5        | 0.499           | 0.185   | 0.297           | 0/3         | 1/4      |
+| 0.6        | 0.400           | 0.180   | 0.282           | 0/2         | 2/4      |
+| 0.7        | 0.300           | 0.124   | 0.235           | 0/4         | 0/4      |
+| 0.8        | 0.200           | 0.117   | 0.214           | 0/4         | 0/4      |
+| 0.9        | 0.100           | 0.141   | 0.188           | 0/3         | 1/4      |
+| 1.0        | 0.000           | 0.124   | 0.151           | 0/2         | 2/4      |
+
+Word F1 is 0.876 at Fuzz 0.0 and 0.717 at 0.1. Fuzz 1.0 Word F1 0.124 is prompt-boilerplate regurgitation. One parsed Reconstructed Memory echoes locked-prompt tokens such as Fresh Clues, Endless Fight, and Cleaning Steps instead of a Memory. The measured 0.124 is kept. Nine of 44 trials returned an empty parsed Reconstructed Memory. Those are failures, not zeros. Raw Smart Robot text is stored on every trial before parse.
+
+```bash
+pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
+```
+
+The result file is `bench/gs-t6-reconstruction-accuracy.json`.
+
 ## Play it
 
 ```bash

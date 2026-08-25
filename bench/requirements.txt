@@ -1,0 +1,3 @@
+# Extra deps for GS-T6 when HF_TOKEN is not set. The bench then loads a local
+# Qwen2.5-7B-Instruct Q4_K_M GGUF through llama.cpp.
+llama-cpp-python>=0.3
