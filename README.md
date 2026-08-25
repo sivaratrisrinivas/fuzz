@@ -19,25 +19,25 @@ Like drawing in sand at the shore: write something real, watch waves slowly wash
 
 ## Results
 
-GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Four Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json` and is excluded from the evaluation set. The Smart Robot is told to make a Quiet Rewrite, so exact match is 0 even on an intact Memory.
+GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Four Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json` and is excluded from the evaluation set. Starring uses `box/src/fuzz-simulator.ts`. Smart Robot calls are user-only, with no extra format system prompt. The locked prompt asks for a Quiet Rewrite, so exact match is 0 even on an intact Memory.
 
-Measured on 2026-08-24. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU via llama.cpp. Dataset size 4. Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU. `HF_TOKEN` was not set, so this run used local weights of the same model rather than Hugging Face InferenceClient. Table means were recomputed from the committed trial rows after dropping oak-tree. The model was not rerun.
+Measured on 2026-08-24. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU via llama.cpp. Dataset size 4. Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU. `HF_TOKEN` was not set, so this run used local weights of the same model rather than Hugging Face InferenceClient.
 
 | Fuzz level | Remaining clues | Word F1 | Edit similarity | Exact match | Failures |
 | ---------- | --------------- | ------- | --------------- | ----------- | -------- |
-| 0.0        | 1.000           | 0.828   | 0.753           | 0/4         | 0/4      |
-| 0.1        | 0.900           | 0.849   | 0.873           | 0/4         | 0/4      |
-| 0.2        | 0.800           | 0.704   | 0.722           | 0/4         | 0/4      |
-| 0.3        | 0.700           | 0.297   | 0.656           | 0/4         | 0/4      |
-| 0.4        | 0.600           | 0.301   | 0.585           | 0/3         | 1/4      |
-| 0.5        | 0.500           | 0.152   | 0.458           | 0/4         | 0/4      |
-| 0.6        | 0.400           | 0.141   | 0.376           | 0/3         | 1/4      |
-| 0.7        | 0.300           | 0.122   | 0.262           | 0/3         | 1/4      |
-| 0.8        | 0.200           | 0.115   | 0.190           | 0/4         | 0/4      |
-| 0.9        | 0.100           | 0.078   | 0.135           | 0/4         | 0/4      |
-| 1.0        | 0.000           | 0.204   | 0.280           | 0/4         | 0/4      |
+| 0.0        | 1.000           | 0.785   | 0.668           | 0/4         | 0/4      |
+| 0.1        | 0.900           | 0.761   | 0.736           | 0/4         | 0/4      |
+| 0.2        | 0.800           | 0.524   | 0.669           | 0/4         | 0/4      |
+| 0.3        | 0.700           | 0.429   | 0.393           | 0/4         | 0/4      |
+| 0.4        | 0.600           | 0.326   | 0.437           | 0/3         | 1/4      |
+| 0.5        | 0.499           | 0.115   | 0.278           | 0/4         | 0/4      |
+| 0.6        | 0.400           | 0.150   | 0.264           | 0/4         | 0/4      |
+| 0.7        | 0.300           | 0.116   | 0.208           | 0/4         | 0/4      |
+| 0.8        | 0.200           | 0.152   | 0.222           | 0/4         | 0/4      |
+| 0.9        | 0.100           | 0.104   | 0.214           | 0/3         | 1/4      |
+| 1.0        | 0.000           | 0.208   | 0.266           | 0/4         | 0/4      |
 
-Word F1 stays above 0.70 through Fuzz 0.2, then drops to 0.297 at 0.3 and 0.152 at 0.5. Three of 44 trials returned an empty Reconstructed Memory. Those are failures, not zeros. This committed JSON does not include the raw Smart Robot text for those failures. Later runs write `raw_output` on every trial before parse.
+Word F1 stays above 0.76 through Fuzz 0.1, then drops to 0.524 at 0.2 and 0.115 at 0.5. Fuzz 1.0 Word F1 0.208 is prompt-boilerplate regurgitation. The Reconstructed Memory echoes locked-prompt tokens such as Fresh Clues and Cleaning Steps instead of a Memory. The measured 0.208 is kept. Two of 44 trials returned an empty parsed Reconstructed Memory. Those are failures, not zeros. Raw Smart Robot text is stored on every trial before parse.
 
 ```bash
 pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
