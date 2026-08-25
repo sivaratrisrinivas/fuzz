@@ -87,6 +87,7 @@ def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str
     try:
         from huggingface_hub import hf_hub_download
         from llama_cpp import Llama
+        from llama_cpp.llama_chat_format import Jinja2ChatFormatter
     except ImportError:
         print("Installing llama-cpp-python for the local GGUF backend ...", flush=True)
         subprocess.check_call(
@@ -94,17 +95,32 @@ def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str
         )
         from huggingface_hub import hf_hub_download
         from llama_cpp import Llama
+        from llama_cpp.llama_chat_format import Jinja2ChatFormatter
 
     print(f"Downloading {GGUF_REPO}/{GGUF_FILE} if needed ...", flush=True)
     model_path = hf_hub_download(repo_id=GGUF_REPO, filename=GGUF_FILE)
     n_threads = os.cpu_count() or 4
     print(f"Loading GGUF from {model_path} with {n_threads} threads ...", flush=True)
+    # User-only ChatML. Do not use chat_format="chatml" or the GGUF default template:
+    # both prepend a format-only system turn (empty system block or "helpful assistant").
+    user_only_formatter = Jinja2ChatFormatter(
+        template=(
+            "{% for message in messages %}"
+            "{% if message['role'] != 'system' %}"
+            "<|im_start|>{{ message['role'] }}\n{{ message['content'] }}<|im_end|>\n"
+            "{% endif %}"
+            "{% endfor %}"
+            "<|im_start|>assistant\n"
+        ),
+        eos_token="<|im_end|>",
+        bos_token="",
+    )
     llm = Llama(
         model_path=model_path,
         n_ctx=4096,
         n_threads=n_threads,
         n_gpu_layers=0,
-        chat_format="chatml",
+        chat_handler=user_only_formatter.to_chat_handler(),
         verbose=False,
     )
 
@@ -128,6 +144,11 @@ def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str
         "n_ctx": 4096,
         "n_gpu_layers": 0,
         "quantization": "Q4_K_M",
+        "chat": "user-only",
+        "chat_note": (
+            "create_chat_completion with a user message only. No format-only system prompt. "
+            "Custom ChatML handler, not llama.cpp chatml or the GGUF default template."
+        ),
     }
     return call, meta
 
@@ -137,6 +158,8 @@ def resolve_caller(harness: Any) -> tuple[Callable[[str], str], dict[str, Any]]:
         return harness.call_smart_robot, {
             "model_source": "huggingface_inference_client",
             "endpoint": os.environ.get("FUZZ_HF_ENDPOINT_URL") or None,
+            "chat": "user-only",
+            "chat_note": "create_chat_completion with a user message only. No format-only system prompt.",
         }
     print("HF_TOKEN is not set. Using local Qwen2.5-7B-Instruct GGUF via llama.cpp.", flush=True)
     return make_local_gguf_caller(harness)
