@@ -86,37 +86,40 @@ def resolved_model_name() -> str:
 
 
 def extract_chat_content(result: Any) -> str:
+    """Return message content, or "" if choices/content are missing.
+
+    A missing field must not become str(result). That dump is non-empty, so
+    call_smart_robot would treat a response object as Smart Robot text.
+    """
     if isinstance(result, str):
         return result
+    content = None
     choices = getattr(result, "choices", None)
     if choices and len(choices) > 0:
         first_choice = choices[0]
         message = getattr(first_choice, "message", None)
         if message is not None:
             content = getattr(message, "content", None)
-            if content is not None:
-                return str(content)
-            if isinstance(message, dict):
+            if content is None and isinstance(message, dict):
                 content = message.get("content")
-                if content is not None:
-                    return str(content)
-    if isinstance(result, dict):
+    if content is None and isinstance(result, dict):
         dict_choices = result.get("choices") or []
         if dict_choices:
-            message = dict_choices[0].get("message", {})
+            message = dict_choices[0].get("message") or {}
             content = message.get("content")
-            if content is not None:
-                return str(content)
-        return str(result)
-    return str(result)
+    if content is None:
+        return ""
+    return str(content)
 
 
 def call_smart_robot(prompt: str) -> str:
     """One Smart Robot chat call. Raises if the client, token, or response is missing.
 
-    Used by this CLI and by bench/gs_t6_reconstruction_accuracy.py. User-only messages,
-    matching play: no extra format system prompt. Does not fall back to empty markers
-    or the sample reconstruction file.
+    Used by this CLI and by bench/gs_t6_reconstruction_accuracy.py. Sends a user
+    message only, with no extra format system prompt. Play still sends a format
+    system prompt in ReconstructCoordinator._default_model_caller, so this path
+    is not production-identical. Does not fall back to empty markers or the
+    sample reconstruction file.
     """
     if InferenceClient is None:
         raise RuntimeError("huggingface_hub is not installed")

@@ -8,7 +8,9 @@ the same parser the thin helper uses in play.
 
 Dissolving is driven by box/src/fuzz-simulator.ts (FuzzSimulator.applyWaveToPositions)
 via bench/dissolve-with-simulator.ts. Fresh Clues are left empty so the curve is Fuzz Level only.
-Smart Robot calls are user-only, with no extra format system prompt.
+Smart Robot calls are user-only, with no extra format system prompt on this bench caller.
+Play still sends a format system prompt in ReconstructCoordinator._default_model_caller,
+so these numbers are not production-identical.
 
 One command from the repo root:
   pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
@@ -130,10 +132,10 @@ def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str
             max_tokens=harness.MAX_TOKENS,
             temperature=harness.TEMPERATURE,
         )
-        text = harness.extract_chat_content(result)
-        if not str(text).strip():
-            raise RuntimeError("local Smart Robot returned empty text")
-        return str(text)
+        # Return the extracted text, including empty. run_trial persists it, then
+        # marks empty or parse failures as failed. Do not raise here or raw_output
+        # is stored as null.
+        return str(harness.extract_chat_content(result))
 
     meta = {
         "model_source": "llama_cpp_local_gguf",
@@ -147,7 +149,9 @@ def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str
         "chat": "user-only",
         "chat_note": (
             "create_chat_completion with a user message only. No format-only system prompt. "
-            "Custom ChatML handler, not llama.cpp chatml or the GGUF default template."
+            "Custom ChatML handler, not llama.cpp chatml or the GGUF default template. "
+            "Not production-identical: ReconstructCoordinator._default_model_caller still "
+            "sends a format system prompt."
         ),
     }
     return call, meta
@@ -159,7 +163,11 @@ def resolve_caller(harness: Any) -> tuple[Callable[[str], str], dict[str, Any]]:
             "model_source": "huggingface_inference_client",
             "endpoint": os.environ.get("FUZZ_HF_ENDPOINT_URL") or None,
             "chat": "user-only",
-            "chat_note": "create_chat_completion with a user message only. No format-only system prompt.",
+            "chat_note": (
+                "create_chat_completion with a user message only. No format-only system prompt. "
+                "Not production-identical: ReconstructCoordinator._default_model_caller still "
+                "sends a format system prompt."
+            ),
         }
     print("HF_TOKEN is not set. Using local Qwen2.5-7B-Instruct GGUF via llama.cpp.", flush=True)
     return make_local_gguf_caller(harness)
@@ -453,6 +461,8 @@ def run_trial(
         prompt = build_prompt(fuzz, [])
         raw = call_smart_robot(prompt)
         trial["raw_output"] = raw
+        if not str(raw).strip():
+            raise RuntimeError("Smart Robot returned empty text")
         parsed = parse_reconstruction(raw)
         recon = (parsed.get("reconstructed_memory") or "").strip()
         if not recon:
@@ -543,6 +553,10 @@ def main() -> int:
         "max_tokens": harness.MAX_TOKENS,
         "seed": SEED,
         "chat": "user-only",
+        "chat_play_note": (
+            "User-only GS-T6 calls are not production-identical. "
+            "ReconstructCoordinator._default_model_caller still sends a format system prompt."
+        ),
         "starring": "box/src/fuzz-simulator.ts",
         "dataset_size": len(memories),
         "dataset_path": str(MEMORIES_PATH.relative_to(ROOT)),

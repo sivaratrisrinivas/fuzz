@@ -19,7 +19,7 @@ Like drawing in sand at the shore: write something real, watch waves slowly wash
 
 ## Results
 
-GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Four Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json` and is excluded from the evaluation set. Starring uses `box/src/fuzz-simulator.ts`. Smart Robot calls are user-only chat_completion, with no extra format system prompt on the caller or the GGUF ChatML handler. The locked prompt asks for a Quiet Rewrite, so exact match is 0 even on an intact Memory.
+GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Four Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json` and is excluded from the evaluation set. Starring uses `box/src/fuzz-simulator.ts`. Smart Robot calls are user-only chat_completion, with no extra format system prompt on the bench caller or the GGUF ChatML handler. Play still sends a format system prompt in ReconstructCoordinator, so these numbers are not production-identical. The locked prompt asks for a Quiet Rewrite, so exact match is 0 even on an intact Memory.
 
 Measured on 2026-08-25. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU via llama.cpp. Dataset size 4. Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU. `HF_TOKEN` was not set, so this run used local weights of the same model rather than Hugging Face InferenceClient.
 

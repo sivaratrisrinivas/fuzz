@@ -14,12 +14,13 @@
     "n_gpu_layers": 0,
     "quantization": "Q4_K_M",
     "chat": "user-only",
-    "chat_note": "create_chat_completion with a user message only. No format-only system prompt. Custom ChatML handler, not llama.cpp chatml or the GGUF default template."
+    "chat_note": "create_chat_completion with a user message only. No format-only system prompt. Custom ChatML handler, not llama.cpp chatml or the GGUF default template. Not production-identical: ReconstructCoordinator._default_model_caller still sends a format system prompt."
   },
   "temperature": 0.7,
   "max_tokens": 1200,
   "seed": 42,
   "chat": "user-only",
+  "chat_play_note": "User-only GS-T6 calls are not production-identical. ReconstructCoordinator._default_model_caller still sends a format system prompt.",
   "starring": "box/src/fuzz-simulator.ts",
   "dataset_size": 4,
   "dataset_path": "bench/gs-t6-memories.json",
