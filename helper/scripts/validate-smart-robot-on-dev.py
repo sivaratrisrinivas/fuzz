@@ -113,13 +113,15 @@ def extract_chat_content(result: Any) -> str:
 
 
 def call_smart_robot(prompt: str) -> str:
-    """One Smart Robot chat call. Raises if the client, token, or response is missing.
+    """One Smart Robot chat call. Raises if the client or token is missing.
 
-    Used by this CLI and by bench/gs_t6_reconstruction_accuracy.py. Sends a user
-    message only, with no extra format system prompt. Play still sends a format
-    system prompt in ReconstructCoordinator._default_model_caller, so this path
-    is not production-identical. Does not fall back to empty markers or the
-    sample reconstruction file.
+    Empty text is returned as "" so GS-T6 can persist raw_output, then mark the
+    trial failed. Same persist-then-fail path as the local GGUF caller. Used by
+    this CLI and by bench/gs_t6_reconstruction_accuracy.py. Sends a user message
+    only, with no extra format system prompt. Play still sends a format system
+    prompt in ReconstructCoordinator._default_model_caller, so this path is not
+    production-identical. Does not fall back to empty markers or the sample
+    reconstruction file.
     """
     if InferenceClient is None:
         raise RuntimeError("huggingface_hub is not installed")
@@ -146,8 +148,6 @@ def call_smart_robot(prompt: str) -> str:
             temperature=TEMPERATURE,
         )
         text = extract_chat_content(result)
-    if not str(text).strip():
-        raise RuntimeError("Smart Robot returned empty text")
     return str(text)
 
 

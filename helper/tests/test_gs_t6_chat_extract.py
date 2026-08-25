@@ -92,6 +92,45 @@ class TestRunTrialPersistsRawThenFails(unittest.TestCase):
         self.assertIn("empty text", trial["error"])
         self.assertIsNone(trial["word_f1"])
 
+    def test_hf_call_smart_robot_returns_empty_instead_of_raising(self):
+        class FakeChatCompletions:
+            def create(self, *, model, messages, max_tokens, temperature):
+                return {"choices": [{"message": {"content": None}}]}
+
+        class FakeChat:
+            completions = FakeChatCompletions()
+
+        class FakeInferenceClient:
+            def __init__(self, model, token):
+                self.chat = FakeChat()
+
+        with patch.object(HARNESS, "InferenceClient", FakeInferenceClient), patch.dict(
+            "os.environ", {"HF_TOKEN": "test-token"}, clear=False
+        ):
+            text = HARNESS.call_smart_robot("locked prompt")
+        self.assertEqual(text, "")
+
+        with patch.object(
+            BENCH,
+            "dissolve_with_product_simulator",
+            return_value={"final_fuzz": "abc", "replaced_chars": 1, "fuzz_simulator_level": 0.5},
+        ), patch.object(HARNESS, "InferenceClient", FakeInferenceClient), patch.dict(
+            "os.environ", {"HF_TOKEN": "test-token"}, clear=False
+        ):
+            trial = BENCH.run_trial(
+                memory_id="night-bus",
+                original="abc",
+                fuzz_level=0.5,
+                seed=42,
+                build_prompt=lambda fuzz, clues: "prompt",
+                call_smart_robot=HARNESS.call_smart_robot,
+                parse_reconstruction=lambda raw: {"reconstructed_memory": "should not parse"},
+            )
+        self.assertEqual(trial["raw_output"], "")
+        self.assertEqual(trial["status"], "failed")
+        self.assertIn("empty text", trial["error"])
+        self.assertIsNone(trial["word_f1"])
+
     def test_parse_empty_keeps_returned_raw(self):
         raw = "=== STEP 1 ===\n\n=== RECONSTRUCTED MEMORY ===\n"
         with patch.object(
