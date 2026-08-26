@@ -1,27 +1,44 @@
 # Fuzz
 
-Like drawing in sand at the shore: write something real, watch waves slowly wash it away, fight to save the pieces, and see a computer guess the whole thing from what's left — learning that rebuilding from damage is never an exact copy.
+Fuzz is a browser game where you write a private paragraph, watch waves wash it into junk, type to save pieces, and see a computer guess the original from what is left.
 
-## What, why, how
+## Who it is for
 
-**What it is.** You write a private paragraph. Then waves come and slowly scramble it — real letters turn into junk. You can type to fix them while the waves keep coming. When you let go, your scrambled text gets sent to an AI that tries to rebuild what you originally wrote. You see them side by side.
+It is for anyone who has heard that AI rebuilds pictures from random specks, or repairs damaged text, and still has no gut feel for what that means. You do not need a machine-learning class or an account.
 
-**Why it exists.** This is what AI image generators actually do under the hood. They start with random noise and slowly remove it in steps, guided by a prompt. Fuzz lets you *feel* that process with words instead of pictures. You live through the destroying, the fighting, and the rebuilding yourself — so you understand what "diffusion" really means without any math or diagrams.
+The problem the game solves is that the idea stays abstract until you live it. Image tools start from junk and slowly guess a picture. Fuzz does that with words, in your browser, on a paragraph you wrote. Waves replace letters with junk. You type to put letters back while the waves keep coming. When you stop, a computer looks at the damaged text plus the pieces you saved and guesses what you wrote. You see your original next to that guess. The guess is never a photocopy. A few words come back changed on purpose. That gap is the lesson.
 
-**How it works.** The game has three parts:
-- A live fight screen where waves dissolve your text and you rewrite to save it
-- A thin server that sends only your scrambled text (never your original) to an AI
-- The AI does 4 careful steps: first using your saved corrections as hints, then filling in around them, then guessing the rest from its training, and finally making small creative changes so the result is close but not exact
+Your original paragraph never leaves the browser. Only the damaged text and the saved pieces go to a small Python helper. After one guess, the helper forgets them.
 
-**The lesson.** The AI doesn't make a perfect copy. It makes a *best guess* using what you saved plus what it learned from millions of other texts. The quiet rewrites — the parts it changed — are where you see the computer's imagination at work. That's the whole point: rebuilding from damage is creative, not mechanical.
+## How to try it
 
-**Privacy.** Your original text never leaves your browser. Only the scrambled version goes to the server. After one guess, the server forgets everything.
+This repo has no hosted demo. Run the game on your machine. Install Bun, the JavaScript runtime this repo uses, from https://bun.sh. You also need Python 3.
 
-## Results
+Start the game screen from the repo root. It serves http://localhost:3000
 
-GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Four Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json` and is excluded from the evaluation set. Starring uses `box/src/fuzz-simulator.ts`. Smart Robot calls are user-only chat_completion, with no extra format system prompt on the bench caller or the GGUF ChatML handler. Play still sends a format system prompt in ReconstructCoordinator, so these numbers are not production-identical. The locked prompt asks for a Quiet Rewrite, so exact match is 0 even on an intact Memory.
+```bash
+cd box && bun install && bun dev
+```
 
-Measured on 2026-08-25. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU via llama.cpp. Dataset size 4. Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU. `HF_TOKEN` was not set, so this run used local weights of the same model rather than Hugging Face InferenceClient.
+In a second terminal, start the helper that talks to the model.
+
+```bash
+cd helper && pip install -r requirements.txt && python -m uvicorn src.thin_helper.main:app --reload
+```
+
+Open http://localhost:3000. Type a paragraph. Pick Freeform to fight at your own pace, or Timed for a 60-second round. Waves start. Type to repair letters. Stop when you want a guess.
+
+Set `HF_TOKEN` if you want the helper to call `Qwen/Qwen2.5-7B-Instruct` through Hugging Face, a hosted model API. Without that token, the last step still finishes on your machine by swapping some words from a synonym list.
+
+## What the numbers mean
+
+On 2026-08-25 we asked: if nobody types to save letters, how close is the computer's guess as more of the paragraph is washed away?
+
+Four sample paragraphs, n=4. Eleven wash amounts from 0.0, fully intact, to 1.0, fully washed. The wash is the same code the game uses, `box/src/fuzz-simulator.ts`. The model is `Qwen/Qwen2.5-7B-Instruct`, run locally as Q4_K_M compressed weights on CPU through llama.cpp, a local model runner. `HF_TOKEN` was not set. Each model call was a user-only chat_completion. That means one user message and no extra format system prompt. The live game still sends a format system prompt, so these numbers are not a player-round score. The prompt asks for a quiet rewrite, so exact match is 0 at every level, including intact text.
+
+Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU.
+
+Word F1 is the overlap of words between the original paragraph and the guess. 1 would mean the same words. 0 would mean none. Edit similarity is how close the characters are. Exact match is a full identical copy. Remaining clues is the share of original letters still visible after the wash. Failures are trials where the parsed guess came back empty. Those are not scored as zero. Word F1 and edit similarity average only the trials that parsed.
 
 | Fuzz level | Remaining clues | Word F1 | Edit similarity | Exact match | Failures |
 | ---------- | --------------- | ------- | --------------- | ----------- | -------- |
@@ -37,32 +54,34 @@ Measured on 2026-08-25. Model `Qwen/Qwen2.5-7B-Instruct` as a Q4_K_M GGUF on CPU
 | 0.9        | 0.100           | 0.141   | 0.188           | 0/3         | 1/4      |
 | 1.0        | 0.000           | 0.124   | 0.151           | 0/2         | 2/4      |
 
-Word F1 is 0.876 at Fuzz 0.0 and 0.717 at 0.1. Fuzz 1.0 Word F1 0.124 is prompt-boilerplate regurgitation. One parsed Reconstructed Memory echoes locked-prompt tokens such as Fresh Clues, Endless Fight, and Cleaning Steps instead of a Memory. The measured 0.124 is kept. Nine of 44 trials returned an empty parsed Reconstructed Memory. Those are failures, not zeros. Raw Smart Robot text is stored on every trial before parse.
+Read the table as a collapse, not a leaderboard. Word F1 is 0.876 at Fuzz 0.0 and 0.717 at 0.1. At Fuzz 1.0, Word F1 is 0.124. That 0.124 is prompt-boilerplate regurgitation. One parsed guess echoed locked-prompt tokens such as Fresh Clues, Endless Fight, and Cleaning Steps instead of a paragraph. The measured 0.124 is kept. Nine of 44 trials returned an empty parsed guess. Raw model text is stored on every trial before parse.
+
+A fifth sample, oak-tree in `helper/prompts/sample-fight-end-data.json`, is used to check the prompt. It is not in the four scored paragraphs.
+
+Rerun from the repo root. This command drives `box/src/fuzz-simulator.ts` for the wash, then scores guesses.
 
 ```bash
 pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
 ```
 
-The result file is `bench/gs-t6-reconstruction-accuracy.json`.
+The committed result file is `bench/gs-t6-reconstruction-accuracy.json`.
 
-## Play it
+## For contributors
+
+**Game screen.** `box/` is Bun and TypeScript. It owns the live wash, typing, clue capture, side-by-side compare, and ocean audio synthesized in code with no audio files. The wash engine is `box/src/fuzz-simulator.ts`.
+
+**Helper.** `helper/` is a small Python web server built with FastAPI. It builds the prompt, calls the model once, and forgets the payload. Default model is `Qwen/Qwen2.5-7B-Instruct`. Override with `FUZZ_SMART_ROBOT_MODEL`.
+
+**Modes.** Freeform lets the player fight at their own pace. Timed is a 60-second countdown round.
+
+**Fresh Clues.** Every successful rewrite at the right time is captured as a clue that helps the later guess. The accuracy run above left those empty on purpose so the curve is wash amount only.
+
+Tests from the repo root:
 
 ```bash
-cd box && bun install && bun dev          # http://localhost:3000
-cd helper && pip install -r requirements.txt && python -m uvicorn src.thin_helper.main:app --reload
+cd box && bun test
 ```
 
-Set `HF_TOKEN` for real AI reconstruction. Without it, the game uses a local fallback (synonym substitution).
-
-Tests: `bun test` (box), `python -m pytest helper/tests` (helper).
-
-## What's inside
-
-- **Box** (Bun + TypeScript): the game screen — waves, typing, animations, side-by-side compare, procedural ocean audio
-- **Helper** (Python/FastAPI): builds the prompt, calls the AI, forgets everything after
-- **AI robot**: configurable Hugging Face model (default: `Qwen/Qwen2.5-7B-Instruct`, swap via `FUZZ_SMART_ROBOT_MODEL`)
-- **Mode selector**: Freeform (fight at your own pace) or Timed (60-second countdown round)
-- **Fresh Clues**: every successful rewrite at the right time is captured as a clue that helps the AI reconstruct better
-- **Procedural audio**: ocean ambience, wave crashes, tension drone, reveal chime — all synthesized, no audio files
-
-20 frontend tests + 17 Python tests pass.
+```bash
+cd helper && python -m pytest tests
+```
