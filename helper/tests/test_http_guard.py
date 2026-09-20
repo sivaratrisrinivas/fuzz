@@ -105,6 +105,14 @@ class TestRateLimitCleanupAndVercelDefault(unittest.TestCase):
         self.assertNotIn("stale", self.guard._hits)
         self.assertIn("fresh", self.guard._hits)
 
+    def test_idle_ip_expired_window_is_dropped(self):
+        with patch("thin_helper.http_guard.time.monotonic", return_value=0.0):
+            self.assertIsNone(self.guard.check_rate_limit("old"))
+        with patch("thin_helper.http_guard.time.monotonic", return_value=61.0):
+            self.assertIsNone(self.guard.check_rate_limit("new"))
+        self.assertNotIn("old", self.guard._hits)
+        self.assertIn("new", self.guard._hits)
+
     def test_expired_window_drops_then_restarts_bucket(self):
         os.environ["FUZZ_RATE_LIMIT_PER_MINUTE"] = "1"
         with patch("thin_helper.http_guard.time.monotonic", return_value=0.0):

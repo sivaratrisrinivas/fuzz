@@ -102,9 +102,15 @@ def _evict_oldest_locked() -> None:
     _hits.pop(oldest_ip, None)
 
 
-def _drop_empty_locked() -> None:
-    empty = [ip for ip, q in _hits.items() if not q]
-    for ip in empty:
+def _prune_locked(now: float, window: float) -> None:
+    """Drop empty deques and IPs whose hits have all left the window. Cap the map."""
+    stale = []
+    for ip, q in _hits.items():
+        while q and now - q[0] >= window:
+            q.popleft()
+        if not q:
+            stale.append(ip)
+    for ip in stale:
         _hits.pop(ip, None)
     while len(_hits) > MAX_TRACKED_IPS:
         _evict_oldest_locked()
@@ -116,27 +122,17 @@ def check_rate_limit(ip: str) -> Optional[int]:
     limit = rate_limit_per_minute()
     now = time.monotonic()
     with _lock:
+        _prune_locked(now, window)
         q = _hits.get(ip)
         if q is None:
             if len(_hits) >= MAX_TRACKED_IPS:
                 _evict_oldest_locked()
             _hits[ip] = deque([now])
             return None
-        while q and now - q[0] >= window:
-            q.popleft()
-        if not q:
-            _hits.pop(ip, None)
-            _drop_empty_locked()
-            if len(_hits) >= MAX_TRACKED_IPS:
-                _evict_oldest_locked()
-            _hits[ip] = deque([now])
-            return None
         if len(q) >= limit:
             retry = int(max(1, window - (now - q[0])))
-            _drop_empty_locked()
             return retry
         q.append(now)
-        _drop_empty_locked()
         return None
 
 
