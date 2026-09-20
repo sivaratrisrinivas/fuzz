@@ -53,16 +53,19 @@ def _rightmost_hop(value: str) -> str:
 def client_ip_from_headers(headers: Mapping[str, Any], fallback: str = "unknown") -> str:
     """Rate-limit key from platform-trusted forwarded headers, never client X-Real-IP.
 
-    Order: x-vercel-forwarded-for (Vercel-set), then rightmost X-Forwarded-For hop
-    (nginx overwrites that header with $remote_addr; Vercel appends the connecting IP),
-    else the TCP peer fallback. Raw X-Real-IP is client-controlled on the public
-    reconstruct path and must not bypass per-IP rate limits.
+    On Vercel (VERCEL env set): x-vercel-forwarded-for is platform-set; use its
+    rightmost hop. Off Vercel that header is client-forwardable (docker-compose
+    nginx does not overwrite it), so ignore it.
+
+    Then the rightmost X-Forwarded-For hop (nginx overwrites with $remote_addr;
+    Vercel appends the connecting IP), else the TCP peer fallback.
     """
-    vercel = _header(headers, "x-vercel-forwarded-for")
-    if vercel:
-        hop = _rightmost_hop(vercel)
-        if hop:
-            return hop
+    if os.environ.get("VERCEL"):
+        vercel = _header(headers, "x-vercel-forwarded-for")
+        if vercel:
+            hop = _rightmost_hop(vercel)
+            if hop:
+                return hop
     forwarded = _header(headers, "x-forwarded-for")
     if forwarded:
         hop = _rightmost_hop(forwarded)

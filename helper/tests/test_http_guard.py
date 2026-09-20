@@ -60,35 +60,59 @@ class TestClientIpFromHeaders(unittest.TestCase):
             "8.8.8.8",
         )
 
-    def test_ignores_client_x_real_ip_prefers_platform_forwarded_headers(self):
+    def test_ignores_client_x_real_ip_and_spoofed_vercel_header_off_platform(self):
         from thin_helper.http_guard import client_ip_from_headers
 
-        self.assertEqual(
-            client_ip_from_headers(
-                {
-                    "X-Forwarded-For": "1.1.1.1, 9.9.9.9",
-                    "X-Real-IP": "4.4.4.4",
-                }
-            ),
-            "9.9.9.9",
-        )
-        self.assertEqual(
-            client_ip_from_headers(
-                {"X-Real-IP": "4.4.4.4"},
-                fallback="10.0.0.1",
-            ),
-            "10.0.0.1",
-        )
-        self.assertEqual(
-            client_ip_from_headers(
-                {
-                    "X-Real-IP": "4.4.4.4",
-                    "X-Forwarded-For": "1.1.1.1, 8.8.8.8",
-                    "x-vercel-forwarded-for": "5.5.5.5, 6.6.6.6",
-                }
-            ),
-            "6.6.6.6",
-        )
+        old_vercel = os.environ.get("VERCEL")
+        os.environ.pop("VERCEL", None)
+        try:
+            self.assertEqual(
+                client_ip_from_headers(
+                    {
+                        "X-Forwarded-For": "1.1.1.1, 9.9.9.9",
+                        "X-Real-IP": "4.4.4.4",
+                        "x-vercel-forwarded-for": "5.5.5.5, 6.6.6.6",
+                    }
+                ),
+                "9.9.9.9",
+            )
+            self.assertEqual(
+                client_ip_from_headers(
+                    {
+                        "X-Real-IP": "4.4.4.4",
+                        "x-vercel-forwarded-for": "5.5.5.5",
+                    },
+                    fallback="10.0.0.1",
+                ),
+                "10.0.0.1",
+            )
+        finally:
+            if old_vercel is None:
+                os.environ.pop("VERCEL", None)
+            else:
+                os.environ["VERCEL"] = old_vercel
+
+    def test_vercel_header_used_only_when_vercel_env_set(self):
+        from thin_helper.http_guard import client_ip_from_headers
+
+        old_vercel = os.environ.get("VERCEL")
+        os.environ["VERCEL"] = "1"
+        try:
+            self.assertEqual(
+                client_ip_from_headers(
+                    {
+                        "X-Real-IP": "4.4.4.4",
+                        "X-Forwarded-For": "1.1.1.1, 8.8.8.8",
+                        "x-vercel-forwarded-for": "5.5.5.5, 6.6.6.6",
+                    }
+                ),
+                "6.6.6.6",
+            )
+        finally:
+            if old_vercel is None:
+                os.environ.pop("VERCEL", None)
+            else:
+                os.environ["VERCEL"] = old_vercel
 
 
 class TestRateLimitCleanupAndVercelDefault(unittest.TestCase):
@@ -238,6 +262,7 @@ class TestVercelReconstructPath(unittest.TestCase):
         self.guard = guard
         self.guard._hits.clear()
         self._old_limit = os.environ.get("FUZZ_RATE_LIMIT_PER_MINUTE")
+        self._old_vercel = os.environ.get("VERCEL")
         os.environ["FUZZ_RATE_LIMIT_PER_MINUTE"] = "1000"
 
     def tearDown(self):
@@ -246,6 +271,10 @@ class TestVercelReconstructPath(unittest.TestCase):
             os.environ.pop("FUZZ_RATE_LIMIT_PER_MINUTE", None)
         else:
             os.environ["FUZZ_RATE_LIMIT_PER_MINUTE"] = self._old_limit
+        if self._old_vercel is None:
+            os.environ.pop("VERCEL", None)
+        else:
+            os.environ["VERCEL"] = self._old_vercel
 
     def _post(self, body: bytes, headers: dict | None = None, content_length: int | str | None = None):
         httpd = HTTPServer(("127.0.0.1", 0), self.mod.handler)
@@ -293,6 +322,7 @@ class TestVercelReconstructPath(unittest.TestCase):
 
     def test_hard_rate_limit_uses_rightmost_xff_and_retry_after(self):
         os.environ["FUZZ_RATE_LIMIT_PER_MINUTE"] = "1"
+        os.environ.pop("VERCEL", None)
         payload = b'{"final_fuzz":"abc","fresh_clues":[]}'
         first, first_body, _ = self._post(
             payload,
@@ -304,6 +334,7 @@ class TestVercelReconstructPath(unittest.TestCase):
             headers={
                 "X-Forwarded-For": "1.2.3.4, 10.0.0.9",
                 "X-Real-IP": "9.9.9.9",
+                "x-vercel-forwarded-for": "203.0.113.1",
             },
         )
         self.assertEqual(second, 429, second_body)
