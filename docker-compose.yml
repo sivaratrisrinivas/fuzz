@@ -13,7 +13,7 @@ services:
       FUZZ_SMART_ROBOT_BACKEND: ${FUZZ_SMART_ROBOT_BACKEND:-}
       FUZZ_CORS_ORIGINS: ${FUZZ_CORS_ORIGINS:-http://localhost:3000}
       FUZZ_RATE_LIMIT_PER_MINUTE: ${FUZZ_RATE_LIMIT_PER_MINUTE:-30}
-      FUZZ_SMART_ROBOT_TIMEOUT_S: ${FUZZ_SMART_ROBOT_TIMEOUT_S:-45}
+      FUZZ_SMART_ROBOT_TIMEOUT_S: ${FUZZ_SMART_ROBOT_TIMEOUT_S:-25}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
       interval: 10s

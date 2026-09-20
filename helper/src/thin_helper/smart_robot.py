@@ -128,7 +128,7 @@ def call_huggingface(prompt: str) -> str:
     model = resolved_model_name()
     endpoint = os.environ.get("FUZZ_HF_ENDPOINT_URL")
     use_model = endpoint or model
-    timeout_s = float(os.environ.get("FUZZ_SMART_ROBOT_TIMEOUT_S", "45"))
+    timeout_s = float(os.environ.get("FUZZ_SMART_ROBOT_TIMEOUT_S", "25"))
     client = InferenceClient(model=use_model, token=token, timeout=timeout_s)
     messages = build_smart_robot_messages(prompt)
     try:
@@ -224,20 +224,20 @@ def sample_reconstruction_text() -> str:
 def call_play_smart_robot(prompt: str) -> str:
     """Play helper default: HF when configured, else local adapter, else empty markers.
 
-    Hugging Face failures fall back to the validated sample reconstruction (issue #10
-    resilience). Missing credentials do not use the sample — empty markers let the box
-    run buildProgressiveStep on the actual fight-end data.
+    Hugging Face failures return empty markers so the box can run buildProgressiveStep
+    on the actual fight-end data. Play must never return sample-reconstruction-01.md
+    (the oak-tree validation sample) as a successful Reconstructed Memory.
     """
     if use_huggingface():
         try:
             return call_huggingface(prompt)
         except Exception as exc:
             logger.warning(
-                "Smart Robot one-call failed (%s: %s). Falling back to validated sample for Reconstructing.",
+                "Smart Robot one-call failed (%s: %s). Empty markers for box fallback.",
                 type(exc).__name__,
                 exc,
             )
-            return sample_reconstruction_text()
+            return empty_markers()
     if adapter_path() is not None or os.environ.get("FUZZ_SMART_ROBOT_BACKEND", "").lower() == "local":
         try:
             return call_local_adapter(prompt)

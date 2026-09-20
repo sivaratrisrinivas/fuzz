@@ -48,7 +48,7 @@ python3 train/train_lora.py               # PEFT LoRA on Qwen/Qwen2.5-0.5B-Instr
 
 Locked eval is the GS-T6 set (`night-bus`, `kitchen-radio`, `library-rain`, `porch-storm`). `oak-tree` (the sample in `helper/prompts/sample-fight-end-data.json`) is excluded from scoring and from Training data.
 
-Play, bench, and Training share `thin_helper.smart_robot.build_smart_robot_messages` (format system prompt + locked 4 Cleaning Steps user prompt). GS-T32 numbers are production-identical. The older GS-T6 table below used user-only chat and is kept as a historical measured run.
+Play, bench, and Training share `thin_helper.smart_robot.build_smart_robot_messages` (format system prompt + locked 4 Cleaning Steps user prompt). GS-T32 uses those play-identical messages; the CPU eval uses a shorter `max_tokens=512` (play stays 1200). The older GS-T6 table below used user-only chat and is kept as a historical measured run.
 
 Eval (CPU, play-identical chat):
 
@@ -78,14 +78,21 @@ If weights are missing, `python3 train/download_adapter.py` prints the train com
 
 ## How to deploy
 
-**Box (Vercel or similar static host).** `vercel.json` copies `box/src/index.html` and rewrites `POST /reconstruct` to `api/reconstruct.py` (thin helper). Set `HF_TOKEN` (and optional `FUZZ_HF_ENDPOINT_URL`, `FUZZ_SMART_ROBOT_MODEL`) in the host's environment. Original Memory is still rejected. Hobby plans may time out on a slow Smart Robot; a container helper is more reliable.
+**Box (Vercel or similar static host).** `vercel.json` copies `box/src/index.html` and rewrites `POST /reconstruct` to `api/reconstruct.py` (thin helper). Set `HF_TOKEN` (and optional `FUZZ_HF_ENDPOINT_URL`, `FUZZ_SMART_ROBOT_MODEL`) in the host's environment. Original Memory is still rejected.
+
+**Vercel Hobby / free-tier limits (public reconstruct).** Treat this path as a demo, not a globally capped API:
+
+- **Duration.** Hobby serverless functions are capped around **10s**. A Hugging Face Smart Robot call often needs longer. On timeout or HF failure the helper returns **empty markers** (the Box uses its local fallback). It does **not** return `sample-reconstruction-01` (oak-tree) as a successful reconstruction. A container helper is more reliable for live HF calls.
+- **Body.** Reconstruct bodies are capped at **64 KiB**. Missing, invalid, or oversized `Content-Length` is HTTP 400 (`invalid_content_length` / `payload_too_large`) before `sanitize_fight_end`.
+- **Rate limit.** Default **12 requests/minute per instance** when `VERCEL` is set (override with `FUZZ_RATE_LIMIT_PER_MINUTE`). The limiter is **in-memory only**: not shared across instances, resets on cold start, not a platform-wide quota. There is no Upstash/KV store on this path.
+- **Smart Robot call timeout.** Container helper default `FUZZ_SMART_ROBOT_TIMEOUT_S=25` (the HF InferenceClient timeout). That is not a generic HTTP request timeout; Hobby will usually kill the function first.
 
 ```bash
 npx vercel --prod
 # or: docker compose up --build
 ```
 
-**Helper (container).** `helper/Dockerfile` is the FastAPI app with rate limits, prod CORS (`FUZZ_CORS_ORIGINS`), request timeouts, structured errors, and logs that record sizes not Fuzz text. Put it on Fly, Render, Cloud Run, or any container host. Point the Box at it with `FUZZ_HELPER_URL` (dev server) or a reverse-proxy `/reconstruct`.
+**Helper (container).** `helper/Dockerfile` is the FastAPI app with rate limits, prod CORS (`FUZZ_CORS_ORIGINS`), Smart Robot call timeout (`FUZZ_SMART_ROBOT_TIMEOUT_S`, default 25s), structured errors, and logs that record sizes not Fuzz text. Put it on Fly, Render, Cloud Run, or any container host. Point the Box at it with `FUZZ_HELPER_URL` (dev server) or a reverse-proxy `/reconstruct`.
 
 **GitHub homepage.** Live Box (fight client + serverless reconstruct rewrite): https://fuzz-srini5.vercel.app (also https://fuzz-eta.vercel.app). Reconstructing without `HF_TOKEN` returns empty markers and the Box uses its local fallback. Set `HF_TOKEN` / `FUZZ_HF_ENDPOINT_URL` on the Vercel project for the Hugging Face Smart Robot. Portfolio can set the GitHub repository homepage to that URL.
 

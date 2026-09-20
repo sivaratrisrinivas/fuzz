@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app/src \
     FUZZ_CORS_ORIGINS=http://localhost:3000 \
     FUZZ_RATE_LIMIT_PER_MINUTE=30 \
-    FUZZ_SMART_ROBOT_TIMEOUT_S=45
+    FUZZ_SMART_ROBOT_TIMEOUT_S=25
 
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt

@@ -6,8 +6,9 @@ The live fight box owns the real-time Dissolving, The Waves, Fuzz Levels, Rewrit
 (Perfect Help timing). The thin helper receives only final Fuzz + list of Fresh Clues (position/spot, words, Fuzz Level)
 at the end of the Endless Fight, then immediately forgets everything after one Smart Robot call.
 
-Production (GS-T32): health, request timeouts, structured errors, per-IP rate limits, CORS from env,
-request logging without storing Fuzz text, rejection of original Memory fields.
+Production (GS-T32): health, Smart Robot call timeout (FUZZ_SMART_ROBOT_TIMEOUT_S, default 25s),
+structured errors, per-IP rate limits, CORS from env, request logging without storing Fuzz text,
+rejection of original Memory fields.
 
 All terms here are from the locked glossary in CONTEXT.md.
 """
@@ -23,7 +24,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .contract import ContractError, sanitize_fight_end
-from .http_guard import check_rate_limit, client_ip, error_body, new_request_id
+from .http_guard import check_rate_limit, client_ip, error_body, new_request_id, parse_content_length
 from .reconstruct_coordinator import ReconstructCoordinator
 from .smart_robot import DEFAULT_MODEL, resolved_model_name
 
@@ -88,6 +89,24 @@ app.add_middleware(
 # The Reconstruct Coordinator (deep module, only entrypoint per issue #5) is instantiated here.
 # It owns Prompt Constructor + parsing + one Smart Robot call + immediate ephemeral forget (issue #6).
 _coordinator = ReconstructCoordinator()
+
+
+@app.middleware("http")
+async def reconstruct_body_cap(request: Request, call_next):
+    """Reject invalid/oversized reconstruct bodies before JSON parse (64 KiB)."""
+    if request.method == "POST" and request.url.path.rstrip("/") == "/reconstruct":
+        request_id = request.headers.get("x-request-id") or new_request_id()
+        request.state.request_id = request_id
+        try:
+            parse_content_length(request.headers.get("content-length"))
+        except ContractError as exc:
+            return error_body(
+                code=exc.code,
+                message=exc.message,
+                request_id=request_id,
+                status=400,
+            )
+    return await call_next(request)
 
 
 @app.middleware("http")
