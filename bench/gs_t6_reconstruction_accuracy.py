@@ -228,6 +228,7 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         help="Comma-separated Fuzz Levels (default: 0.0..1.0 step 0.1)",
     )
     parser.add_argument("--gate", default="GS-T6")
+    parser.add_argument("--max-tokens", type=int, default=None, help="Override Smart Robot max_tokens (play default 1200)")
     parser.add_argument(
         "--quiet-rewrite-targets",
         default=None,
@@ -575,6 +576,8 @@ def run_trial(
 def main() -> int:
     args = parse_args()
     harness = load_harness()
+    if args.max_tokens:
+        harness.MAX_TOKENS = args.max_tokens
     ReconstructCoordinator = load_coordinator_class()
     coordinator = ReconstructCoordinator()
     memories_doc = json.loads(MEMORIES_PATH.read_text(encoding="utf-8"))

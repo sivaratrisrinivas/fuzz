@@ -1,0 +1,22 @@
+{
+  "base_model": "Qwen/Qwen2.5-0.5B-Instruct",
+  "family": "Qwen2.5 Instruct",
+  "lora_r": 8,
+  "lora_alpha": 16,
+  "target_modules": [
+    "q_proj",
+    "v_proj"
+  ],
+  "rows": 288,
+  "epochs": 1.0,
+  "lr": 0.0002,
+  "max_seq_len": 1536,
+  "seed": 42,
+    "cpu_forced": true,
+    "train_loss": 1.05,
+    "train_runtime_s": 689.3,
+  "prompt": "play-identical FORMAT_SYSTEM_PROMPT + locked 4 Cleaning Steps user prompt",
+  "targets": "Quiet Rewrite paraphrases, not verbatim originals",
+  "format_system_prompt": "You reconstruct text using exact === STEP 1 === through === STEP 4 === then === RECONSTRUCTED MEMORY === markers. Output ONLY the five markers with content after each. No preamble. No explanations. No meta-commentary.",
+  "note": "Exact match 0 vs original Memory is by design. Adapter is task-specific. Default play model remains Qwen/Qwen2.5-7B-Instruct unless FUZZ_SMART_ROBOT_MODEL is set."
+}

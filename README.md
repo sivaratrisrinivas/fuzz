@@ -87,7 +87,7 @@ npx vercel --prod
 
 **Helper (container).** `helper/Dockerfile` is the FastAPI app with rate limits, prod CORS (`FUZZ_CORS_ORIGINS`), request timeouts, structured errors, and logs that record sizes not Fuzz text. Put it on Fly, Render, Cloud Run, or any container host. Point the Box at it with `FUZZ_HELPER_URL` (dev server) or a reverse-proxy `/reconstruct`.
 
-**GitHub homepage.** Set the live Box URL as the repository homepage once secrets (HF_TOKEN, CORS origins) are in place. Until then this PR ships a deployable Box + helper; Portfolio can finish the public URL.
+**GitHub homepage.** Live Box (fight client + serverless reconstruct rewrite): https://fuzz-srini5.vercel.app (also https://fuzz-eta.vercel.app). Reconstructing without `HF_TOKEN` returns empty markers and the Box uses its local fallback. Set `HF_TOKEN` / `FUZZ_HF_ENDPOINT_URL` on the Vercel project for the Hugging Face Smart Robot. Portfolio can set the GitHub repository homepage to that URL.
 
 ## Results
 
@@ -115,11 +115,25 @@ Word F1 is 0.876 at Fuzz 0.0 and 0.717 at 0.1. Fuzz 1.0 Word F1 0.124 is prompt-
 
 ### GS-T32 (CPU, play-identical chat, 0.5B base vs LoRA)
 
-Task-specific Reconstructing adapter on `Qwen/Qwen2.5-0.5B-Instruct`. Same locked eval as GS-T6 (N=4, oak-tree excluded). Chat is production-identical to play. Training set is synthetic (72 Memories × 4 Fuzz Levels). Targets are Quiet Rewrite paraphrases, not originals. **Numbers below are CPU-forced.** Prefer this table for adapter claims. If a cell is still `n/a`, the run has not been committed yet — do not invent metrics.
+Task-specific Reconstructing adapter on `Qwen/Qwen2.5-0.5B-Instruct`. Same locked eval as GS-T6 (N=4, oak-tree excluded). Chat is production-identical to play (format system prompt + locked user prompt). Training set: 288 synthetic rows (72 Memories × Fuzz 0.2/0.4/0.6/0.8) starred with `box/src/fuzz-simulator.ts`. Targets are Quiet Rewrite paraphrases, not originals. **CPU-forced.** Hardware: Intel Xeon, 4 CPUs, 15.64 GB RAM, no GPU. Measured 2026-09-20. Eval `max_tokens=512` (play remains 1200; this cap is a CPU eval choice, not a play change). Train: PEFT LoRA r=8 on q_proj/v_proj, 1 epoch, final train loss 1.05, 540,672 trainable params (0.109%).
 
-See `bench/gs-t32-before.json` and `bench/gs-t32-after.json` after the CPU eval lands in this PR.
+| Fuzz level | Word F1 before | Word F1 after | Edit before | Edit after | Failures before | Failures after |
+| ---------- | -------------- | ------------- | ----------- | ---------- | --------------- | -------------- |
+| 0.0        | 0.746          | 0.938         | 0.698       | 0.947      | 0/4             | 0/4            |
+| 0.1        | 0.407          | 0.719         | 0.503       | 0.768      | 1/4             | 0/4            |
+| 0.2        | 0.369          | 0.521         | 0.317       | 0.501      | 2/4             | 0/4            |
+| 0.3        | 0.180          | 0.380         | 0.323       | 0.411      | 0/4             | 0/4            |
+| 0.4        | 0.164          | 0.251         | 0.290       | 0.330      | 1/4             | 1/4            |
+| 0.5        | 0.092          | 0.219         | 0.407       | 0.308      | 2/4             | 2/4            |
+| 0.6        | 0.063          | 0.159         | 0.178       | 0.215      | 1/4             | 1/4            |
+| 0.7        | 0.067          | 0.151         | 0.070       | 0.278      | 1/4             | 0/4            |
+| 0.8        | 0.141          | 0.109         | 0.199       | 0.178      | 0/4             | 0/4            |
+| 0.9        | 0.168          | 0.037         | 0.250       | 0.100      | 2/4             | 2/4            |
+| 1.0        | 0.139          | 0.099         | 0.210       | 0.203      | 2/4             | 2/4            |
 
-Short bakeoff: 0.5B was chosen because it trains and runs on the helper CPU path (0.5B–7B family). 1.5B/7B adapter Training is the optional GPU path above. Default live model stays `Qwen/Qwen2.5-7B-Instruct` unless `FUZZ_SMART_ROBOT_MODEL` is set (ADR-0002, ADR-0003).
+Word F1 rose on Fuzz 0.0–0.7. Failures fell 12/44 → 8/44. High-Fuzz (0.8–1.0) did not improve; Fuzz 1.0 after is still prompt-boilerplate regurgitation. Exact match vs original went 1/44 → 2/44 (both at Fuzz 0.0). That is **not** the Quiet Rewrite goal — the 0.5B adapter copies more of an intact Memory instead of paraphrasing. Exact match 0 remains the product intent; this small CPU adapter does not achieve it. Default live model stays `Qwen/Qwen2.5-7B-Instruct` (ADR-0002). Short bakeoff: 0.5B was chosen because it trains and serves on this CPU; 7B QLoRA is the optional GPU path, not used for these numbers.
+
+Result files: `bench/gs-t32-before.json`, `bench/gs-t32-after.json`. Adapter: `train/artifacts/qwen25-0.5b-reconstruct-lora`.
 
 ## What's inside
 
