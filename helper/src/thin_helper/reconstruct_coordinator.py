@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Optional, Any
 
 from .prompt_constructor import PromptConstructor
+from .smart_robot import call_play_smart_robot, extract_chat_content
 
 logger = logging.getLogger(__name__)
 
@@ -57,65 +58,16 @@ class ReconstructCoordinator:
             self._model_caller = self._default_model_caller
 
     def _default_model_caller(self, prompt: str) -> str:
-        """Default one-call implementation for the Smart Robot (Qwen on HF).
-        DEV iteration: HF_TOKEN + ZeroGPU/Pro (or dedicated Space). Production: dedicated nvidia-l4 endpoint (env configurable).
-        Never auto-calls production during dev. See validate script + huggingface-zerogpu skill.
-        If no token/client available, returns empty markers — client-side buildProgressiveStep handles the fallback
-        using actual fight data instead of a static sample.
+        """Default one-call implementation for the Smart Robot (Qwen on HF or local adapter).
+
+        Play-identical chat is defined in smart_robot.build_smart_robot_messages (format
+        system prompt + locked user prompt). GS-T6 / Training must use the same messages.
+        DEV iteration: HF_TOKEN + ZeroGPU/Pro (or dedicated Space). Production: dedicated
+        nvidia-l4 endpoint (env configurable). Optional CPU LoRA via FUZZ_SMART_ROBOT_ADAPTER.
+        If no token/client/adapter available, returns empty markers — client-side
+        buildProgressiveStep handles the fallback using actual fight data instead of a static sample.
         """
-        import os
-        try:
-            from huggingface_hub import InferenceClient
-        except Exception:
-            InferenceClient = None  # type: ignore
-        token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-        if InferenceClient is None or not token:
-            # Return empty markers — the client will use its own buildProgressiveStep
-            # with the actual final_fuzz + fresh_clues from the fight end data.
-            return (
-                "=== STEP 1 ===\n\n"
-                "=== STEP 2 ===\n\n"
-                "=== STEP 3 ===\n\n"
-                "=== STEP 4 ===\n\n"
-                "=== RECONSTRUCTED MEMORY ===\n"
-            )
-        model = os.environ.get("FUZZ_SMART_ROBOT_MODEL", "Qwen/Qwen2.5-7B-Instruct")
-        # If dedicated endpoint URL provided via env, InferenceClient accepts it as model= too.
-        endpoint = os.environ.get("FUZZ_HF_ENDPOINT_URL")
-        use_model = endpoint or model
-        client = InferenceClient(model=use_model, token=token)
-        messages = [
-            {"role": "system", "content": "You reconstruct text using exact === STEP 1 === through === STEP 4 === then === RECONSTRUCTED MEMORY === markers. Output ONLY the five markers with content after each. No preamble. No explanations. No meta-commentary."},
-            {"role": "user", "content": prompt}
-        ]
-        try:
-            # Modern HF InferenceClient API (huggingface_hub >= 0.24): chat.completions.create
-            # Preferred for Qwen/Qwen2.5-7B-Instruct and compatible providers.
-            result = client.chat.completions.create(
-                model=use_model,
-                messages=messages,
-                max_tokens=1200,
-                temperature=0.7,
-            )
-            return self._extract_chat_content(result)
-        except (AttributeError, TypeError):
-            # Fallback for older huggingface_hub versions: use chat_completion method
-            logger.info("Falling back to client.chat_completion (older huggingface_hub version).")
-            result = client.chat_completion(
-                messages=messages,
-                max_tokens=1200,
-                temperature=0.7,
-            )
-            return self._extract_chat_content(result)
-        except Exception as exc:
-            # If the Smart Robot call fails entirely, fall back to sample for resilience.
-            logger.warning(
-                "Smart Robot one-call failed (%s: %s). Falling back to validated sample for Reconstructing.",
-                type(exc).__name__, exc,
-            )
-            here = _P(__file__).resolve().parent
-            sample_path = here.parent.parent / "prompts" / "sample-reconstruction-01.md"
-            return sample_path.read_text(encoding="utf-8")
+        return call_play_smart_robot(prompt)
 
     @staticmethod
     def _extract_chat_content(result: Any) -> str:
@@ -125,36 +77,9 @@ class ReconstructCoordinator:
         - Plain string (passthrough)
         - Modern ChatCompletionOutput object (attribute access: .choices[0].message.content)
         - Legacy dict format ({"choices": [{"message": {"content": ...}}]})
+        Missing content is "" (same as the GS-T6 persist-then-fail path). Never dump str(result).
         """
-        if isinstance(result, str):
-            return result
-
-        # Try attribute-based access first (modern ChatCompletionOutput from chat.completions.create)
-        choices = getattr(result, "choices", None)
-        if choices and len(choices) > 0:
-            first_choice = choices[0]
-            message = getattr(first_choice, "message", None)
-            if message is not None:
-                content = getattr(message, "content", None)
-                if content is not None:
-                    return str(content)
-                # message might be a dict in some response shapes
-                if isinstance(message, dict):
-                    content = message.get("content")
-                    if content is not None:
-                        return str(content)
-
-        # Fallback: dict-based access (legacy or raw JSON response)
-        if isinstance(result, dict):
-            dict_choices = result.get("choices") or []
-            if dict_choices:
-                message = dict_choices[0].get("message", {})
-                content = message.get("content")
-                if content is not None:
-                    return str(content)
-            return str(result)
-
-        return str(result)
+        return extract_chat_content(result)
 
     def build_prompt(self, fight_end_data: dict) -> str:
         """Delegate to Prompt Constructor using the data contract shape {final_fuzz, fresh_clues: [...] }.

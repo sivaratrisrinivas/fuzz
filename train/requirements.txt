@@ -1,0 +1,9 @@
+# Reconstructing adapter Training (CPU by default).
+# Torch CPU wheel: pip install torch --index-url https://download.pytorch.org/whl/cpu
+# then the rest of this file. Or: pip install -r train/requirements.txt
+torch>=2.2
+transformers>=4.41
+peft>=0.11
+datasets>=2.19
+accelerate>=0.31
+huggingface_hub>=0.23

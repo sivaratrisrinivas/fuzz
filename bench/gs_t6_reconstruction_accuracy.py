@@ -8,9 +8,9 @@ the same parser the thin helper uses in play.
 
 Dissolving is driven by box/src/fuzz-simulator.ts (FuzzSimulator.applyWaveToPositions)
 via bench/dissolve-with-simulator.ts. Fresh Clues are left empty so the curve is Fuzz Level only.
-Smart Robot calls are user-only, with no extra format system prompt on this bench caller.
-Play still sends a format system prompt in ReconstructCoordinator._default_model_caller,
-so these numbers are not production-identical.
+Smart Robot calls are play-identical: format system prompt + locked user prompt from
+thin_helper.smart_robot.build_smart_robot_messages (the same messages ReconstructCoordinator
+sends in play). GS-T32 adapter eval uses this caller so numbers are production-identical.
 
 One command from the repo root:
   pip install -r helper/requirements.txt -r bench/requirements.txt && python3 bench/gs_t6_reconstruction_accuracy.py
@@ -32,6 +32,7 @@ import re
 import shutil
 import subprocess
 import sys
+import argparse
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
@@ -103,14 +104,12 @@ def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str
     model_path = hf_hub_download(repo_id=GGUF_REPO, filename=GGUF_FILE)
     n_threads = os.cpu_count() or 4
     print(f"Loading GGUF from {model_path} with {n_threads} threads ...", flush=True)
-    # User-only ChatML. Do not use chat_format="chatml" or the GGUF default template:
-    # both prepend a format-only system turn (empty system block or "helpful assistant").
-    user_only_formatter = Jinja2ChatFormatter(
+    # Play-identical ChatML: include the format system prompt. Do not use the GGUF
+    # default template (it prepends a generic "helpful assistant" system turn).
+    play_formatter = Jinja2ChatFormatter(
         template=(
             "{% for message in messages %}"
-            "{% if message['role'] != 'system' %}"
             "<|im_start|>{{ message['role'] }}\n{{ message['content'] }}<|im_end|>\n"
-            "{% endif %}"
             "{% endfor %}"
             "<|im_start|>assistant\n"
         ),
@@ -122,13 +121,13 @@ def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str
         n_ctx=4096,
         n_threads=n_threads,
         n_gpu_layers=0,
-        chat_handler=user_only_formatter.to_chat_handler(),
+        chat_handler=play_formatter.to_chat_handler(),
         verbose=False,
     )
 
     def call(prompt: str) -> str:
         result = llm.create_chat_completion(
-            messages=[{"role": "user", "content": prompt}],
+            messages=harness.build_smart_robot_messages(prompt),
             max_tokens=harness.MAX_TOKENS,
             temperature=harness.TEMPERATURE,
         )
@@ -146,30 +145,125 @@ def make_local_gguf_caller(harness: Any) -> tuple[Callable[[str], str], dict[str
         "n_ctx": 4096,
         "n_gpu_layers": 0,
         "quantization": "Q4_K_M",
-        "chat": "user-only",
+        "chat": "play-identical-system-plus-user",
         "chat_note": (
-            "create_chat_completion with a user message only. No format-only system prompt. "
-            "Custom ChatML handler, not llama.cpp chatml or the GGUF default template. "
-            "Not production-identical: ReconstructCoordinator._default_model_caller still "
-            "sends a format system prompt."
+            "create_chat_completion with the play format system prompt plus the locked user "
+            "prompt (thin_helper.smart_robot.build_smart_robot_messages). Production-identical "
+            "to ReconstructCoordinator._default_model_caller."
         ),
     }
     return call, meta
 
 
-def resolve_caller(harness: Any) -> tuple[Callable[[str], str], dict[str, Any]]:
-    if hf_token():
+def make_transformers_caller(
+    harness: Any, model_name: str, adapter: Optional[str]
+) -> tuple[Callable[[str], str], dict[str, Any]]:
+    """CPU (or GPU if present) Hugging Face transformers generate. Optional PEFT adapter."""
+    try:
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+    except ImportError as exc:
+        raise RuntimeError(
+            "transformers backend needs torch + transformers (+ peft if --adapter). "
+            "Install with: pip install -r train/requirements.txt"
+        ) from exc
+
+    print(f"Loading transformers model {model_name} ...", flush=True)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+    if adapter:
+        from peft import PeftModel
+
+        print(f"Applying LoRA adapter from {adapter} ...", flush=True)
+        model = PeftModel.from_pretrained(model, adapter)
+    model.eval()
+    device = torch.device("cpu")
+    model.to(device)
+
+    def call(prompt: str) -> str:
+        messages = harness.build_smart_robot_messages(prompt)
+        text = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+        inputs = tokenizer(text, return_tensors="pt")
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        with torch.no_grad():
+            output_ids = model.generate(
+                **inputs,
+                max_new_tokens=harness.MAX_TOKENS,
+                temperature=harness.TEMPERATURE,
+                do_sample=True,
+                pad_token_id=tokenizer.pad_token_id,
+            )
+        prompt_len = inputs["input_ids"].shape[1]
+        decoded = tokenizer.decode(output_ids[0][prompt_len:], skip_special_tokens=True)
+        return decoded.strip()
+
+    meta = {
+        "model_source": "transformers_local",
+        "model_name": model_name,
+        "adapter": adapter,
+        "device": str(device),
+        "n_gpu_layers": 0,
+        "chat": "play-identical-system-plus-user",
+        "chat_note": (
+            "transformers generate with play format system prompt plus locked user prompt. "
+            "Production-identical messages to ReconstructCoordinator._default_model_caller."
+        ),
+    }
+    return call, meta
+
+
+def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="GS-T6 / GS-T32 Reconstructing accuracy across Fuzz Levels")
+    parser.add_argument("--backend", choices=("auto", "hf", "gguf", "transformers"), default="auto")
+    parser.add_argument("--model", default=None, help="Override FUZZ_SMART_ROBOT_MODEL / GGUF default")
+    parser.add_argument("--adapter", default=None, help="PEFT LoRA adapter directory (transformers backend)")
+    parser.add_argument("--output", default=str(DEFAULT_OUTPUT), help="JSON result path")
+    parser.add_argument(
+        "--levels",
+        default=None,
+        help="Comma-separated Fuzz Levels (default: 0.0..1.0 step 0.1)",
+    )
+    parser.add_argument("--gate", default="GS-T6")
+    parser.add_argument(
+        "--quiet-rewrite-targets",
+        default=None,
+        help="Optional JSON {id: paraphrase} for secondary Word F1 vs Quiet Rewrite target",
+    )
+    return parser.parse_args(argv)
+
+
+def resolve_caller(
+    harness: Any,
+    backend: str,
+    model_name: Optional[str],
+    adapter: Optional[str],
+) -> tuple[Callable[[str], str], dict[str, Any]]:
+    if backend == "auto":
+        if adapter:
+            backend = "transformers"
+        elif hf_token():
+            backend = "hf"
+        else:
+            backend = "gguf"
+    if backend == "hf":
         return harness.call_smart_robot, {
             "model_source": "huggingface_inference_client",
             "endpoint": os.environ.get("FUZZ_HF_ENDPOINT_URL") or None,
-            "chat": "user-only",
+            "chat": "play-identical-system-plus-user",
             "chat_note": (
-                "create_chat_completion with a user message only. No format-only system prompt. "
-                "Not production-identical: ReconstructCoordinator._default_model_caller still "
-                "sends a format system prompt."
+                "create_chat_completion with the play format system prompt plus the locked user "
+                "prompt. Production-identical to ReconstructCoordinator._default_model_caller."
             ),
         }
-    print("HF_TOKEN is not set. Using local Qwen2.5-7B-Instruct GGUF via llama.cpp.", flush=True)
+    if backend == "transformers":
+        name = model_name or os.environ.get("FUZZ_SMART_ROBOT_MODEL") or "Qwen/Qwen2.5-0.5B-Instruct"
+        return make_transformers_caller(harness, name, adapter)
+    if model_name:
+        os.environ["FUZZ_SMART_ROBOT_MODEL"] = model_name
     return make_local_gguf_caller(harness)
 
 
@@ -479,33 +573,46 @@ def run_trial(
 
 
 def main() -> int:
+    args = parse_args()
     harness = load_harness()
     ReconstructCoordinator = load_coordinator_class()
     coordinator = ReconstructCoordinator()
     memories_doc = json.loads(MEMORIES_PATH.read_text(encoding="utf-8"))
     memories = [m for m in memories_doc["memories"] if m["id"] not in EXCLUDED_MEMORY_IDS]
-    model_name = harness.resolved_model_name()
+    if args.model:
+        os.environ["FUZZ_SMART_ROBOT_MODEL"] = args.model
+    model_name = args.model or harness.resolved_model_name()
     date_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     hardware = collect_hardware()
     sha = git_sha()
-    caller, source_meta = resolve_caller(harness)
+    caller, source_meta = resolve_caller(harness, args.backend, args.model, args.adapter)
+    levels = FUZZ_LEVELS
+    if args.levels:
+        levels = [round(float(x.strip()), 1) for x in args.levels.split(",") if x.strip()]
+    output_path = Path(args.output)
+    quiet_targets: dict[str, str] = {}
+    if args.quiet_rewrite_targets:
+        quiet_doc = json.loads(Path(args.quiet_rewrite_targets).read_text(encoding="utf-8"))
+        quiet_targets = quiet_doc.get("targets") or quiet_doc
 
-    print("GS-T6 Reconstructing accuracy across Fuzz Levels")
+    print(f"{args.gate} Reconstructing accuracy across Fuzz Levels")
     print(f"Closest harness: {HARNESS_PATH.relative_to(ROOT)}")
     print(f"Model: {model_name}")
+    print(f"Adapter: {args.adapter or 'none'}")
     print(f"Model source: {source_meta.get('model_source')}")
+    print(f"Chat: play-identical-system-plus-user")
     print(f"Date: {date_iso}")
     print(f"Dataset size: {len(memories)} memories")
-    print(f"Fuzz levels: {FUZZ_LEVELS}")
+    print(f"Fuzz levels: {levels}")
     print(f"Hardware: {hardware}")
     print(f"Git SHA: {sha}")
     print()
 
     trials: list[dict[str, Any]] = []
-    total = len(memories) * len(FUZZ_LEVELS)
+    total = len(memories) * len(levels)
     done = 0
     for mem in memories:
-        for level in FUZZ_LEVELS:
+        for level in levels:
             done += 1
             print(
                 f"[{done}/{total}] memory={mem['id']} fuzz_level={level:.1f} ...",
@@ -520,6 +627,13 @@ def main() -> int:
                 call_smart_robot=caller,
                 parse_reconstruction=coordinator.parse_reconstruction,
             )
+            if mem["id"] in quiet_targets and trial.get("reconstructed_memory"):
+                trial["quiet_rewrite_word_f1"] = bag_f1(
+                    quiet_targets[mem["id"]], trial["reconstructed_memory"]
+                )
+                trial["quiet_rewrite_edit_similarity"] = edit_similarity(
+                    quiet_targets[mem["id"]], trial["reconstructed_memory"]
+                )
             if trial["status"] == "ok":
                 print(
                     f"  ok word_f1={fmt(trial['word_f1'])} "
@@ -531,31 +645,33 @@ def main() -> int:
                 print(f"  FAILED {trial['error']}", flush=True)
             trials.append(trial)
             payload_so_far = {
-                "gate": "GS-T6",
+                "gate": args.gate,
                 "status": "in_progress",
                 "trials_done": done,
                 "trials_total": total,
-                "by_fuzz_level": summarize(trials, FUZZ_LEVELS),
+                "by_fuzz_level": summarize(trials, levels),
                 "trials": trials,
             }
-            DEFAULT_OUTPUT.write_text(json.dumps(payload_so_far, indent=2) + "\n", encoding="utf-8")
+            output_path.write_text(json.dumps(payload_so_far, indent=2) + "\n", encoding="utf-8")
 
-    by_level = summarize(trials, FUZZ_LEVELS)
+    by_level = summarize(trials, levels)
     annotate_fuzz_1_boilerplate(trials, by_level)
     payload = {
-        "gate": "GS-T6",
+        "gate": args.gate,
         "title": "Reconstructing accuracy across Fuzz Levels",
         "date": date_iso,
         "model": model_name,
+        "adapter": args.adapter,
         "model_source": source_meta.get("model_source"),
         "model_source_detail": source_meta,
         "temperature": harness.TEMPERATURE,
         "max_tokens": harness.MAX_TOKENS,
         "seed": SEED,
-        "chat": "user-only",
+        "chat": "play-identical-system-plus-user",
         "chat_play_note": (
-            "User-only GS-T6 calls are not production-identical. "
-            "ReconstructCoordinator._default_model_caller still sends a format system prompt."
+            "Play-identical: format system prompt + locked user prompt from "
+            "thin_helper.smart_robot.build_smart_robot_messages. Same messages as "
+            "ReconstructCoordinator._default_model_caller."
         ),
         "starring": "box/src/fuzz-simulator.ts",
         "dataset_size": len(memories),
@@ -570,18 +686,20 @@ def main() -> int:
             "Empty on purpose. This sweep isolates Fuzz Level. Player Rewriting is not mixed in."
         ),
         "quiet_rewrite_note": (
-            "The locked prompt asks for a Quiet Rewrite, so exact match can stay low even when Fuzz is light."
+            "The locked prompt asks for a Quiet Rewrite, so exact match can stay low even when Fuzz is light. "
+            "Training targets are Quiet Rewrite paraphrases, not verbatim originals. Exact match 0 is by design."
         ),
         "hardware": hardware,
         "git_sha": sha,
         "closest_harness": str(HARNESS_PATH.relative_to(ROOT)),
-        "fuzz_levels": FUZZ_LEVELS,
+        "fuzz_levels": levels,
         "by_fuzz_level": by_level,
         "trials": trials,
+        "cpu_forced": hardware.get("gpu") in (None, "none"),
     }
-    DEFAULT_OUTPUT.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    output_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     print()
-    print(f"Wrote {DEFAULT_OUTPUT.relative_to(ROOT)}")
+    print(f"Wrote {output_path}")
     print()
     print("## Results")
     print()

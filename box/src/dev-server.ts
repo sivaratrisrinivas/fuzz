@@ -21,7 +21,8 @@
  * See PRD #1, handoff, ADR-0001, CONTEXT.md.
  */
 
-const PORT = 3000;
+const PORT = Number(process.env.PORT || 3000);
+const HELPER_ORIGIN = (process.env.FUZZ_HELPER_URL || "http://localhost:8000").replace(/\/$/, "");
 
 const server = Bun.serve({
   port: PORT,
@@ -41,7 +42,7 @@ const server = Bun.serve({
     // and receive the structured result (steps + reconstructed_memory) from the one Smart Robot call + ephemeral forget.
     // (Direct calls to helper also work; proxy for dev convenience / no CORS.)
     if (pathname === "/reconstruct" && req.method === "POST") {
-      const helperUrl = "http://localhost:8000/reconstruct";
+      const helperUrl = `${HELPER_ORIGIN}/reconstruct`;
       const bodyText = await req.text();
       const helperResp = await fetch(helperUrl, {
         method: "POST",

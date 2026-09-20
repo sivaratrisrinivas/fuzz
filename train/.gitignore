@@ -1,0 +1,7 @@
+# Committed Reconstructing adapter (small LoRA). Trainer checkpoints are local-only.
+train/artifacts/**/trainer-work/
+train/artifacts/**/checkpoint-*/
+train/artifacts/**/runs/
+# Hugging Face / torch caches
+.cache/
+*.gguf

@@ -66,6 +66,13 @@ Thumbs.db
 *.pem
 *.key
 
+# Vercel / compose local output
+public/
+.vercel/
+
+# Adapter trainer worktrees (keep committed adapter_config.json + weights)
+train/artifacts/**/trainer-work/
+
 # Temp / logs from dev runs
 tmp/
 *.log

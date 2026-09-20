@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <meta name="description" content="Fuzz — feel how AI rebuilds meaning from damaged data. The Feeling Science through the Word Lesson and the Real Experience of the Sand Drawing." />
+  <meta name="fuzz-helper-url" content="" />
   <title>Fuzz</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap');
@@ -1776,6 +1777,13 @@
       }
     }
 
+    function reconstructEndpoint() {
+      const meta = document.querySelector('meta[name="fuzz-helper-url"]');
+      const fromMeta = meta && meta.getAttribute('content');
+      const base = String(window.FUZZ_HELPER_URL || fromMeta || '').replace(/\/$/, '');
+      return base ? (base + '/reconstruct') : '/reconstruct';
+    }
+
     function sendToReconstruct(endData) {
       showView('reconstructing');
       document.getElementById('reconstruct-status').textContent = 'The Smart Robot is Reconstructing…';
@@ -1796,7 +1804,7 @@
       const timeout = 30000;
       const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-      fetch('/reconstruct', {
+      fetch(reconstructEndpoint(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(endData),
