@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  box:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: box
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install
+      - run: bun test
+
+  helper:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: helper
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python -m pytest tests
+        env:
+          PYTHONPATH: src
+
+  reconstruct-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r helper/requirements.txt
+      - name: Stub Reconstructing smoke (no live Smart Robot)
+        working-directory: helper
+        env:
+          PYTHONPATH: src
+        run: python -m pytest tests/test_reconstruct_coordinator.py tests/test_production_hardening.py tests/test_gs_t6_chat_extract.py tests/test_training_holdout.py tests/test_http_guard.py -q

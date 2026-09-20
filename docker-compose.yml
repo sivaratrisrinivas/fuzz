@@ -1,0 +1,37 @@
+services:
+  helper:
+    build: ./helper
+    ports:
+      - "8000:8000"
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+      HUGGINGFACEHUB_API_TOKEN: ${HUGGINGFACEHUB_API_TOKEN:-}
+      FUZZ_SMART_ROBOT_MODEL: ${FUZZ_SMART_ROBOT_MODEL:-Qwen/Qwen2.5-7B-Instruct}
+      FUZZ_HF_ENDPOINT_URL: ${FUZZ_HF_ENDPOINT_URL:-}
+      FUZZ_SMART_ROBOT_ADAPTER: ${FUZZ_SMART_ROBOT_ADAPTER:-}
+      FUZZ_SMART_ROBOT_ADAPTER_BASE: ${FUZZ_SMART_ROBOT_ADAPTER_BASE:-Qwen/Qwen2.5-0.5B-Instruct}
+      FUZZ_SMART_ROBOT_BACKEND: ${FUZZ_SMART_ROBOT_BACKEND:-}
+      FUZZ_CORS_ORIGINS: ${FUZZ_CORS_ORIGINS:-http://localhost:3000}
+      FUZZ_RATE_LIMIT_PER_MINUTE: ${FUZZ_RATE_LIMIT_PER_MINUTE:-30}
+      FUZZ_SMART_ROBOT_TIMEOUT_S: ${FUZZ_SMART_ROBOT_TIMEOUT_S:-25}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  box:
+    build: ./box
+    ports:
+      - "3000:80"
+    depends_on:
+      helper:
+        condition: service_healthy
+
+# One command from the repo root:
+#   docker compose up --build
+# Box: http://localhost:3000
+# Helper: http://localhost:8000/health
+# Set HF_TOKEN in .env for the Hugging Face Smart Robot. Without it, Reconstructing
+# returns empty markers and the box uses its local fallback. Original Memory never
+# enters the helper.

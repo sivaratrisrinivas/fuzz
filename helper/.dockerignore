@@ -1,0 +1,6 @@
+# Docker context for the thin helper
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+*.pyc

@@ -1,0 +1,34 @@
+{
+  "description": "Locked Reconstructing eval. GS-T6 four Memories only. oak-tree (sample-fight-end-data.json) is excluded from scoring. These texts must never appear in train.jsonl.",
+  "excluded_memory_ids": [
+    "kitchen-radio",
+    "library-rain",
+    "night-bus",
+    "oak-tree",
+    "porch-storm"
+  ],
+  "memories": [
+    {
+      "id": "night-bus",
+      "text": "The first time I rode the night bus home from the city the windows were fogged and someone had drawn a small heart in the corner. I kept wiping a circle to watch the streetlights smear past. The driver hummed the same three notes for an hour. When we reached my stop the rain had ended and the pavement smelled like dust."
+    },
+    {
+      "id": "kitchen-radio",
+      "text": "Sunday mornings the kitchen radio sat on the windowsill above the sink and played the same station my mother trusted. She fried eggs in too much butter and asked if I had slept. The kettle clicked off and the room filled with steam. I still hear that click when a room is too quiet."
+    },
+    {
+      "id": "library-rain",
+      "text": "I used to hide in the back aisle of the public library when it rained so hard the street turned silver. The carpet smelled like old paper and wet coats. I read the same adventure novel until the closing bell rang. The librarian never rushed me even when the lights began to dim."
+    },
+    {
+      "id": "porch-storm",
+      "text": "We sat on the porch and counted the seconds between lightning and thunder until the storm was over the hill. The dog pressed against my knee and would not look at the sky. Afterward the yard steamed and a single chair had blown into the garden. Nobody went out to fetch it until morning."
+    }
+  ],
+  "targets": {
+    "night-bus": "The opening hour I took the evening bus houseward from the city the panes were fogged and someone had drawn a modest heart in the edge. I kept wiping a circle to watch the lanterns streak past. The driver murmured the same three bars for an stretch. When we reached my stop the shower had stopped and the stones smelled like earth.",
+    "kitchen-radio": "Sabbath early hours the kitchen wireless waited on the sill above the basin and played the same platform my mom loved. She sizzled breakfast in too much ghee and asked if I had slept. The pot clicked off and the space rose with steam. I still notice that snap when a space is too still.",
+    "library-rain": "I used to sit in the back aisle of the public stacks when it rained so hard the street shifted bright. The floor smelled like aged pages and damp wool. I followed the same quest book until the last bell sounded. The keeper never pushed me even when the bulbs started to dim.",
+    "porch-storm": "We stayed on the stoop and marked the pauses between lightning and thunder until the weather was over the ridge. The pup leaned against my side and would not glance at the dark. Later the lawn breathed and a one seat had carried into the garden. Nobody went out to get it until morning."
+  }
+}

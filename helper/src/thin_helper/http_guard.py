@@ -1,0 +1,160 @@
+"""Rate limits, request ids, body-size guards, and structured errors for the thin helper.
+
+Logs request metadata only (sizes, counts, duration). Never logs Fuzz text,
+Fresh Clues words, prompts, or Reconstructed Memory.
+"""
+
+from __future__ import annotations
+
+import os
+import threading
+import time
+import uuid
+from collections import deque
+from typing import Any, Mapping, Optional
+
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+from .contract import ContractError
+
+# Match box/nginx.conf client_max_body_size 64k.
+MAX_BODY_BYTES = 64 * 1024
+MAX_TRACKED_IPS = 4096
+
+_lock = threading.Lock()
+_hits: dict[str, deque[float]] = {}
+
+
+def new_request_id() -> str:
+    return uuid.uuid4().hex[:12]
+
+
+def _header(headers: Mapping[str, Any], name: str) -> str:
+    if hasattr(headers, "get"):
+        value = headers.get(name)
+        if value:
+            return str(value).strip()
+        # BaseHTTPRequestHandler headers are case-insensitive; Mapping may not be.
+        lower = name.lower()
+        for key in getattr(headers, "keys", lambda: [])():
+            if str(key).lower() == lower:
+                got = headers.get(key)
+                if got:
+                    return str(got).strip()
+    return ""
+
+
+def _rightmost_hop(value: str) -> str:
+    hops = [h.strip() for h in value.split(",") if h.strip()]
+    return hops[-1] if hops else ""
+
+
+def client_ip_from_headers(headers: Mapping[str, Any], fallback: str = "unknown") -> str:
+    """Rate-limit key from platform-trusted forwarded headers, never client X-Real-IP.
+
+    On Vercel (VERCEL env set): x-vercel-forwarded-for is platform-set; use its
+    rightmost hop. Off Vercel that header is client-forwardable (docker-compose
+    nginx does not overwrite it), so ignore it.
+
+    Then the rightmost X-Forwarded-For hop (nginx overwrites with $remote_addr;
+    Vercel appends the connecting IP), else the TCP peer fallback.
+    """
+    if os.environ.get("VERCEL"):
+        vercel = _header(headers, "x-vercel-forwarded-for")
+        if vercel:
+            hop = _rightmost_hop(vercel)
+            if hop:
+                return hop
+    forwarded = _header(headers, "x-forwarded-for")
+    if forwarded:
+        hop = _rightmost_hop(forwarded)
+        if hop:
+            return hop
+    return fallback
+
+
+def client_ip(request: Request) -> str:
+    fallback = "unknown"
+    if request.client and request.client.host:
+        fallback = request.client.host
+    return client_ip_from_headers(request.headers, fallback=fallback)
+
+
+def parse_content_length(raw: Optional[str], *, max_bytes: int = MAX_BODY_BYTES) -> int:
+    """Return body length to read, or raise ContractError for invalid/oversized Content-Length."""
+    if raw is None or str(raw).strip() == "":
+        raise ContractError("invalid_content_length", "Content-Length is required.")
+    try:
+        length = int(str(raw).strip())
+    except (TypeError, ValueError) as exc:
+        raise ContractError("invalid_content_length", "Content-Length must be an integer.") from exc
+    if length < 0:
+        raise ContractError("invalid_content_length", "Content-Length is invalid.")
+    if length > max_bytes:
+        raise ContractError(
+            "payload_too_large",
+            f"Request body exceeds {max_bytes} bytes.",
+        )
+    return length
+
+
+def rate_limit_per_minute() -> int:
+    default = "12" if os.environ.get("VERCEL") else "30"
+    try:
+        return max(1, int(os.environ.get("FUZZ_RATE_LIMIT_PER_MINUTE", default)))
+    except ValueError:
+        return int(default)
+
+
+def _evict_oldest_locked() -> None:
+    if not _hits:
+        return
+    oldest_ip = min(_hits.items(), key=lambda kv: kv[1][-1] if kv[1] else 0)[0]
+    _hits.pop(oldest_ip, None)
+
+
+def _prune_locked(now: float, window: float) -> None:
+    """Drop empty deques and IPs whose hits have all left the window. Cap the map."""
+    stale = []
+    for ip, q in _hits.items():
+        while q and now - q[0] >= window:
+            q.popleft()
+        if not q:
+            stale.append(ip)
+    for ip in stale:
+        _hits.pop(ip, None)
+    while len(_hits) > MAX_TRACKED_IPS:
+        _evict_oldest_locked()
+
+
+def check_rate_limit(ip: str) -> Optional[int]:
+    """Return retry-after seconds when limited, else None."""
+    window = 60.0
+    limit = rate_limit_per_minute()
+    now = time.monotonic()
+    with _lock:
+        _prune_locked(now, window)
+        q = _hits.get(ip)
+        if q is None:
+            if len(_hits) >= MAX_TRACKED_IPS:
+                _evict_oldest_locked()
+            _hits[ip] = deque([now])
+            return None
+        if len(q) >= limit:
+            retry = int(max(1, window - (now - q[0])))
+            return retry
+        q.append(now)
+        return None
+
+
+def error_body(*, code: str, message: str, request_id: str, status: int) -> JSONResponse:
+    return JSONResponse(
+        status_code=status,
+        content={
+            "error": message,
+            "code": code,
+            "request_id": request_id,
+            "note": "Original Memory never entered the helper. All data has been ephemerally forgotten.",
+        },
+    )

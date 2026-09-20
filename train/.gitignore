@@ -1,0 +1,8 @@
+# Committed Reconstructing adapter (small LoRA). Trainer checkpoints are local-only.
+artifacts/**/trainer-work/
+artifacts/**/checkpoint-*/
+artifacts/**/runs/
+artifacts/**/tokenizer.json
+artifacts/**/tokenizer_config.json
+artifacts/**/chat_template.jinja
+*.gguf

@@ -101,10 +101,10 @@ class TestRunTrialPersistsRawThenFails(unittest.TestCase):
             completions = FakeChatCompletions()
 
         class FakeInferenceClient:
-            def __init__(self, model, token):
+            def __init__(self, model, token=None, timeout=None, **kwargs):
                 self.chat = FakeChat()
 
-        with patch.object(HARNESS, "InferenceClient", FakeInferenceClient), patch.dict(
+        with patch("huggingface_hub.InferenceClient", FakeInferenceClient), patch.dict(
             "os.environ", {"HF_TOKEN": "test-token"}, clear=False
         ):
             text = HARNESS.call_smart_robot("locked prompt")
@@ -114,7 +114,7 @@ class TestRunTrialPersistsRawThenFails(unittest.TestCase):
             BENCH,
             "dissolve_with_product_simulator",
             return_value={"final_fuzz": "abc", "replaced_chars": 1, "fuzz_simulator_level": 0.5},
-        ), patch.object(HARNESS, "InferenceClient", FakeInferenceClient), patch.dict(
+        ), patch("huggingface_hub.InferenceClient", FakeInferenceClient), patch.dict(
             "os.environ", {"HF_TOKEN": "test-token"}, clear=False
         ):
             trial = BENCH.run_trial(

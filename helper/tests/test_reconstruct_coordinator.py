@@ -589,9 +589,10 @@ class TestReconstructCoordinatorAndPromptConstructor(unittest.TestCase):
             completions = FakeChatCompletions()
 
         class FakeInferenceClient:
-            def __init__(self, model, token):
+            def __init__(self, model, token=None, timeout=None, **kwargs):
                 self.model = model
                 self.token = token
+                self.timeout = timeout
                 self.chat = FakeChat()
 
             def chat_completion(self, *, messages, max_tokens, temperature):

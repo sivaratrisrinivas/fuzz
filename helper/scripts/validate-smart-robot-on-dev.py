@@ -24,6 +24,9 @@ The callable helpers below (format_fresh_clues, build_full_prompt, call_smart_ro
 are the shared Smart Robot one-call path. GS-T6 reconstruction accuracy in
 bench/gs_t6_reconstruction_accuracy.py imports them rather than growing a second client.
 
+call_smart_robot is play-identical: the same format system prompt + user locked prompt as
+ReconstructCoordinator / thin_helper.smart_robot.build_smart_robot_messages.
+
 The authoritative artifacts (prompt + samples) live in helper/prompts/ and were validated against the exact 4 Cleaning Steps,
 Fresh Clues usage, Creative Guessing, Quiet Rewrite requirement, parsable marked format, and Feeling Lesson goals
 from PRD #1 and issue #3. See the sample-reconstruction-01.md for a representative captured output.
@@ -33,17 +36,29 @@ All terms are from CONTEXT.md glossary. References: PRD #1, issue #3, ADR-0001, 
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any, Optional
+
+_HELPER_SRC = Path(__file__).resolve().parent.parent / "src"
+if str(_HELPER_SRC) not in sys.path:
+    sys.path.insert(0, str(_HELPER_SRC))
+
+from thin_helper.smart_robot import (  # noqa: E402
+    DEFAULT_MODEL,
+    FORMAT_SYSTEM_PROMPT,
+    MAX_TOKENS,
+    TEMPERATURE,
+    build_smart_robot_messages,
+    call_huggingface,
+    extract_chat_content,
+    resolved_model_name,
+)
 
 try:
     from huggingface_hub import InferenceClient
 except ImportError:
     InferenceClient = None
-
-DEFAULT_MODEL = "Qwen/Qwen2.5-7B-Instruct"
-MAX_TOKENS = 1200
-TEMPERATURE = 0.7
 
 
 def helper_root() -> Path:
@@ -81,74 +96,18 @@ def build_full_prompt(
     )
 
 
-def resolved_model_name() -> str:
-    return os.environ.get("FUZZ_SMART_ROBOT_MODEL", DEFAULT_MODEL)
-
-
-def extract_chat_content(result: Any) -> str:
-    """Return message content, or "" if choices/content are missing.
-
-    A missing field must not become str(result). That dump is non-empty, so
-    call_smart_robot would treat a response object as Smart Robot text.
-    """
-    if isinstance(result, str):
-        return result
-    content = None
-    choices = getattr(result, "choices", None)
-    if choices and len(choices) > 0:
-        first_choice = choices[0]
-        message = getattr(first_choice, "message", None)
-        if message is not None:
-            content = getattr(message, "content", None)
-            if content is None and isinstance(message, dict):
-                content = message.get("content")
-    if content is None and isinstance(result, dict):
-        dict_choices = result.get("choices") or []
-        if dict_choices:
-            message = dict_choices[0].get("message") or {}
-            content = message.get("content")
-    if content is None:
-        return ""
-    return str(content)
-
-
 def call_smart_robot(prompt: str) -> str:
     """One Smart Robot chat call. Raises if the client or token is missing.
 
     Empty text is returned as "" so GS-T6 can persist raw_output, then mark the
     trial failed. Same persist-then-fail path as the local GGUF caller. Used by
-    this CLI and by bench/gs_t6_reconstruction_accuracy.py. Sends a user message
-    only, with no extra format system prompt. Play still sends a format system
-    prompt in ReconstructCoordinator._default_model_caller, so this path is not
-    production-identical. Does not fall back to empty markers or the sample
-    reconstruction file.
+    this CLI and by bench/gs_t6_reconstruction_accuracy.py.
+
+    Play-identical: format system prompt + locked user prompt
+    (thin_helper.smart_robot.build_smart_robot_messages). Does not fall back to
+    empty markers or the sample reconstruction file.
     """
-    if InferenceClient is None:
-        raise RuntimeError("huggingface_hub is not installed")
-    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACEHUB_API_TOKEN")
-    if not token:
-        raise RuntimeError("HF_TOKEN is not set")
-    model = resolved_model_name()
-    endpoint = os.environ.get("FUZZ_HF_ENDPOINT_URL")
-    use_model = endpoint or model
-    client = InferenceClient(model=use_model, token=token)
-    messages = [{"role": "user", "content": prompt}]
-    try:
-        result = client.chat.completions.create(
-            model=use_model,
-            messages=messages,
-            max_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-        )
-        text = extract_chat_content(result)
-    except (AttributeError, TypeError):
-        result = client.chat_completion(
-            messages=messages,
-            max_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-        )
-        text = extract_chat_content(result)
-    return str(text)
+    return call_huggingface(prompt)
 
 
 def main():
