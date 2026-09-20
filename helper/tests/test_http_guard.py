@@ -60,7 +60,7 @@ class TestClientIpFromHeaders(unittest.TestCase):
             "8.8.8.8",
         )
 
-    def test_prefers_real_ip_and_vercel_forwarded_for(self):
+    def test_ignores_client_x_real_ip_prefers_platform_forwarded_headers(self):
         from thin_helper.http_guard import client_ip_from_headers
 
         self.assertEqual(
@@ -70,10 +70,23 @@ class TestClientIpFromHeaders(unittest.TestCase):
                     "X-Real-IP": "4.4.4.4",
                 }
             ),
-            "4.4.4.4",
+            "9.9.9.9",
         )
         self.assertEqual(
-            client_ip_from_headers({"x-vercel-forwarded-for": "5.5.5.5, 6.6.6.6"}),
+            client_ip_from_headers(
+                {"X-Real-IP": "4.4.4.4"},
+                fallback="10.0.0.1",
+            ),
+            "10.0.0.1",
+        )
+        self.assertEqual(
+            client_ip_from_headers(
+                {
+                    "X-Real-IP": "4.4.4.4",
+                    "X-Forwarded-For": "1.1.1.1, 8.8.8.8",
+                    "x-vercel-forwarded-for": "5.5.5.5, 6.6.6.6",
+                }
+            ),
             "6.6.6.6",
         )
 
@@ -288,7 +301,10 @@ class TestVercelReconstructPath(unittest.TestCase):
         self.assertEqual(first, 200, first_body)
         second, second_body, second_headers = self._post(
             payload,
-            headers={"X-Forwarded-For": "1.2.3.4, 10.0.0.9"},
+            headers={
+                "X-Forwarded-For": "1.2.3.4, 10.0.0.9",
+                "X-Real-IP": "9.9.9.9",
+            },
         )
         self.assertEqual(second, 429, second_body)
         self.assertEqual(second_body["code"], "rate_limited")

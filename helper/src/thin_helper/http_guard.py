@@ -45,20 +45,29 @@ def _header(headers: Mapping[str, Any], name: str) -> str:
     return ""
 
 
-def client_ip_from_headers(headers: Mapping[str, Any], fallback: str = "unknown") -> str:
-    """Rate-limit key from headers. Rightmost X-Forwarded-For hop is the trusted proxy peer.
+def _rightmost_hop(value: str) -> str:
+    hops = [h.strip() for h in value.split(",") if h.strip()]
+    return hops[-1] if hops else ""
 
-    nginx overwrites X-Forwarded-For with $remote_addr (not the client-supplied chain).
-    Vercel appends the connecting IP; the rightmost hop is that peer, not a spoofed leftmost value.
+
+def client_ip_from_headers(headers: Mapping[str, Any], fallback: str = "unknown") -> str:
+    """Rate-limit key from platform-trusted forwarded headers, never client X-Real-IP.
+
+    Order: x-vercel-forwarded-for (Vercel-set), then rightmost X-Forwarded-For hop
+    (nginx overwrites that header with $remote_addr; Vercel appends the connecting IP),
+    else the TCP peer fallback. Raw X-Real-IP is client-controlled on the public
+    reconstruct path and must not bypass per-IP rate limits.
     """
-    real_ip = _header(headers, "x-real-ip") or _header(headers, "x-vercel-forwarded-for")
-    if real_ip:
-        return real_ip.split(",")[-1].strip() or fallback
+    vercel = _header(headers, "x-vercel-forwarded-for")
+    if vercel:
+        hop = _rightmost_hop(vercel)
+        if hop:
+            return hop
     forwarded = _header(headers, "x-forwarded-for")
     if forwarded:
-        hops = [h.strip() for h in forwarded.split(",") if h.strip()]
-        if hops:
-            return hops[-1]
+        hop = _rightmost_hop(forwarded)
+        if hop:
+            return hop
     return fallback
 
 
