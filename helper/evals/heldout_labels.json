@@ -1,0 +1,197 @@
+{
+ "description": "Hand labels for traces_heldout.json, made by reading raw outputs before scoring the pipeline on them (agent-made, needs a human spot check). usable = the final section, or STEP 4 when the final is missing, holds a Memory attempt that can be shown without task chatter in the same paragraph.",
+ "labels": {
+  "train-window/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "train-window/0.3": {
+   "usable": false,
+   "failure": "task_talk"
+  },
+  "train-window/0.6": {
+   "usable": true,
+   "failure": ""
+  },
+  "train-window/0.9": {
+   "usable": false,
+   "failure": "loop_no_final"
+  },
+  "first-bike/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "first-bike/0.3": {
+   "usable": false,
+   "failure": "loop_no_final"
+  },
+  "first-bike/0.6": {
+   "usable": true,
+   "failure": ""
+  },
+  "first-bike/0.9": {
+   "usable": false,
+   "failure": "prompt_echo"
+  },
+  "exam-morning/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "exam-morning/0.3": {
+   "usable": true,
+   "failure": ""
+  },
+  "exam-morning/0.6": {
+   "usable": true,
+   "failure": ""
+  },
+  "exam-morning/0.9": {
+   "usable": false,
+   "failure": "task_talk"
+  },
+  "market-mango/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "market-mango/0.3": {
+   "usable": false,
+   "failure": "task_talk"
+  },
+  "market-mango/0.6": {
+   "usable": false,
+   "failure": "loop_no_final"
+  },
+  "market-mango/0.9": {
+   "usable": true,
+   "failure": ""
+  },
+  "snow-day/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "snow-day/0.3": {
+   "usable": false,
+   "failure": "loop_no_final"
+  },
+  "snow-day/0.6": {
+   "usable": false,
+   "failure": "task_talk"
+  },
+  "snow-day/0.9": {
+   "usable": false,
+   "failure": "prompt_echo"
+  },
+  "lost-dog/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "lost-dog/0.3": {
+   "usable": true,
+   "failure": ""
+  },
+  "lost-dog/0.6": {
+   "usable": true,
+   "failure": ""
+  },
+  "lost-dog/0.9": {
+   "usable": true,
+   "failure": ""
+  },
+  "radio-cricket/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "radio-cricket/0.3": {
+   "usable": true,
+   "failure": ""
+  },
+  "radio-cricket/0.6": {
+   "usable": true,
+   "failure": ""
+  },
+  "radio-cricket/0.9": {
+   "usable": false,
+   "failure": "loop_no_final"
+  },
+  "beach-shell/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "beach-shell/0.3": {
+   "usable": true,
+   "failure": ""
+  },
+  "beach-shell/0.6": {
+   "usable": false,
+   "failure": "loop_no_final"
+  },
+  "beach-shell/0.9": {
+   "usable": true,
+   "failure": ""
+  },
+  "hostel-night/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "hostel-night/0.3": {
+   "usable": false,
+   "failure": "task_talk"
+  },
+  "hostel-night/0.6": {
+   "usable": false,
+   "failure": "stopped_before_step4"
+  },
+  "hostel-night/0.9": {
+   "usable": false,
+   "failure": "prompt_echo"
+  },
+  "festival-lamps/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "festival-lamps/0.3": {
+   "usable": false,
+   "failure": "task_talk"
+  },
+  "festival-lamps/0.6": {
+   "usable": false,
+   "failure": "task_talk"
+  },
+  "festival-lamps/0.9": {
+   "usable": false,
+   "failure": "prompt_echo"
+  },
+  "library-card/0.0": {
+   "usable": true,
+   "failure": ""
+  },
+  "library-card/0.3": {
+   "usable": false,
+   "failure": "loop_no_final"
+  },
+  "library-card/0.6": {
+   "usable": false,
+   "failure": "loop_no_final"
+  },
+  "library-card/0.9": {
+   "usable": true,
+   "failure": ""
+  },
+  "kite-roof/0.0": {
+   "usable": false,
+   "failure": "prompt_echo"
+  },
+  "kite-roof/0.3": {
+   "usable": false,
+   "failure": "loop_no_final"
+  },
+  "kite-roof/0.6": {
+   "usable": false,
+   "failure": "prompt_echo"
+  },
+  "kite-roof/0.9": {
+   "usable": true,
+   "failure": ""
+  }
+ }
+}

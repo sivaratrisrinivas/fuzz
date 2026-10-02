@@ -1,0 +1,5 @@
+{
+ "dev_real": {"shown_usable": 96, "blocked_bad": 34},
+ "heldout_real": {"shown_usable": 24, "blocked_bad": 22},
+ "synthetic": {"dev": 452, "test": 479}
+}
