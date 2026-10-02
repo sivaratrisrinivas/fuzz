@@ -15,12 +15,12 @@ GS-T6/GS-T32 score reconstructions with Word F1 and edit similarity. The prompt 
 
 ## 1. Error analysis
 
-**Status:** OK for format failures, observed in 132 real traces (split markers, out-of-tokens stops, task talk, prompt echo). Faithfulness failures (object swaps, invented stories) were only observed now, on 25 traces, and need more traces.
+**Status:** OK for format failures, observed in 132 real traces (split markers, out-of-tokens stops, task talk, prompt echo). Faithfulness failures were first seen on 25 allam-2-7b traces. The 2026-10-03 Qwen 72B held-out run shows the same pattern on a Qwen model: 11 of 11 faithful at Fuzz 0.0, 1 of 11 at Fuzz 0.3 (9 swap key nouns, such as power -> phone and tea -> teacher), and 0 of 21 at Fuzz 0.6 and 0.9 (mostly invented stories). The output checks blocked all 3 task-talk outputs and showed all 40 readable ones; `residual_fuzz` matched all 3 echoes with no false flags. In the GS-T6 sweep, 3 of 4 Fuzz 1.0 outputs were task talk and are blocked by the output checks.
 
 ## 5. Labeled data
 
 ### Held-out traces come from a different model
-**Status:** Problem exists (blocked). The 48 held-out traces are from allam-2-7b. The HF token here has no provider for the production `Qwen/Qwen2.5-7B-Instruct`. Faithfulness labels: 25, too few for judge validation (aim for about 50 faithful and 50 not).
+**Status:** Problem exists (partly unblocked, 2026-10-03). The 48 original held-out traces are from allam-2-7b. The HF token here still has no provider for the production `Qwen/Qwen2.5-7B-Instruct` (router: "not supported by any provider you have enabled"; the Hub lists only featherless-ai as live, and it is not enabled on this account). As the closest same-family model, `Qwen/Qwen2.5-72B-Instruct` was run through Hugging Face Inference Providers (deepinfra): 43 held-out traces (`traces_heldout_qwen72b.json`) plus a 44-trial GS-T6 sweep (`bench/gs-t6-qwen72b-hf.json`). The held-out run stopped at 43 of 48 when the account hit HTTP 402 (monthly included credits used up). Faithfulness labels now total 65 (25 allam + 40 shown Qwen 72B: 12 faithful, 24 unfaithful, 3 echo, 1 garbled). Still too few faithful cases for judge validation (aim for about 50 faithful and 50 not), and still not the 7B.
 
 ## 4. Human review
 

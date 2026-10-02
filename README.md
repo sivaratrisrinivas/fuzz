@@ -98,6 +98,28 @@ npx vercel --prod
 
 ## Results
 
+### Live Hugging Face run (72B stand-in, play-identical chat)
+
+The default live model `Qwen/Qwen2.5-7B-Instruct` is not served for the Hugging Face token used here. The router answers "not supported by any provider you have enabled"; the Hub lists featherless-ai as its only live provider, and that provider is not enabled on this account. So this run used `Qwen/Qwen2.5-72B-Instruct`, the closest same-family model the token reaches. It is a stand-in for the 7B, not the production model, and a 72B model should be expected to do better than a 7B.
+
+Measured 2026-10-03 with `bench/gs_t6_reconstruction_accuracy.py --backend hf --model Qwen/Qwen2.5-72B-Instruct`. Provider: Hugging Face Inference Providers (auto routing; probe calls on the same token were served by deepinfra). Same 4 Memories and 11 Fuzz Levels as GS-T6, temperature 0.7, max_tokens 1200, format system prompt plus locked user prompt as in play.
+
+| Fuzz level | Remaining clues | Word F1 | Edit similarity | Exact match | Failures |
+| ---------- | --------------- | ------- | --------------- | ----------- | -------- |
+| 0.0        | 1.000           | 0.848   | 0.848           | 0/4         | 0/4      |
+| 0.1        | 0.900           | 0.826   | 0.812           | 0/4         | 0/4      |
+| 0.2        | 0.800           | 0.777   | 0.805           | 0/4         | 0/4      |
+| 0.3        | 0.700           | 0.669   | 0.713           | 0/4         | 0/4      |
+| 0.4        | 0.600           | 0.512   | 0.557           | 0/4         | 0/4      |
+| 0.5        | 0.499           | 0.292   | 0.397           | 0/3         | 1/4      |
+| 0.6        | 0.400           | 0.206   | 0.317           | 0/4         | 0/4      |
+| 0.7        | 0.300           | 0.162   | 0.299           | 0/4         | 0/4      |
+| 0.8        | 0.200           | 0.204   | 0.270           | 0/4         | 0/4      |
+| 0.9        | 0.100           | 0.188   | 0.273           | 0/4         | 0/4      |
+| 1.0        | 0.000           | 0.207   | 0.293           | 0/4         | 0/4      |
+
+1 of 44 trials failed, a client read timeout (porch-storm at Fuzz 0.5), not an empty output. Word F1 holds above 0.66 through Fuzz 0.3 and falls below 0.30 from Fuzz 0.5. Reading the outputs: from Fuzz 0.5 up the model mostly writes a new story (a beach, a dark forest, a library network) instead of rebuilding the Memory. 3 outputs (Fuzz 0.5, 0.7, 0.8) echo the stars. At Fuzz 1.0, 3 of 4 outputs are about "the player" and the game, and the helper's output checks block all 3, so the 0.207 Word F1 there comes from task talk. Result file: `bench/gs-t6-qwen72b-hf.json`.
+
 ### GS-T6 (historical, 7B GGUF, user-only chat)
 
 GS-T6 measures Reconstructing accuracy as Fuzz Levels rise. Four Memories, eleven Fuzz points from 0.0 to 1.0, no Fresh Clues. oak-tree is the validation sample in `helper/prompts/sample-fight-end-data.json` and is excluded from the evaluation set. Starring uses `box/src/fuzz-simulator.ts`. **This table used user-only chat_completion** (no format system prompt). Play sends a format system prompt. Keep these numbers as measured history; do not treat them as production-identical. The locked prompt asks for a Quiet Rewrite, so exact match is 0 even on an intact Memory.
@@ -152,7 +174,8 @@ Result files: `bench/gs-t32-before.json`, `bench/gs-t32-after.json`. Adapter: `t
 - The old parser showed task talk, prompt text, or step markers to the player in 40 of 132 dev traces and 18 of 48 held-out traces.
 - What the player reads on held-out traces, by hand label: 5 of 25 shown outputs are faithful, 8 swap or invent details, and 12 just echo the Fuzz stars. Format checks cannot catch invented details. The `residual_fuzz` flag finds all 12 echoes with no false flags.
 - CI runs `python evals/run_output_eval.py --check` and fails below `helper/evals/baseline.json`.
-- Not measured: reconstruction quality on a larger set. The live default model (`Qwen/Qwen2.5-7B-Instruct`) is not served by any provider enabled for the Hugging Face token used here, so no new 7B traces were collected.
+- Live Qwen check on the held-out Memories: 43 traces from `Qwen/Qwen2.5-72B-Instruct` through Hugging Face Inference Providers (deepinfra), hand labeled in `helper/evals/faithfulness_heldout_qwen72b.json`. The new pipeline showed all 40 readable outputs with no task talk and blocked the 3 task-talk outputs. The old parser would have shown task talk or markers in 4 of 43. Of the 40 shown: at Fuzz 0.0, 11 of 11 are faithful. At Fuzz 0.3, 1 of 11 is faithful, 9 swap or invent details and 1 echoes the stars. At Fuzz 0.6 and 0.9, none are faithful: 15 invent a new story, 2 echo the stars and 1 is garbled letters. `residual_fuzz` flagged all 3 echoes and nothing else.
+- Not measured: the production `Qwen/Qwen2.5-7B-Instruct` live. It is not served by any provider enabled for the Hugging Face token used here, so the 72B is a stand-in. The held-out run stopped at 43 of 48 traces (kite-roof x4 and library-card at Fuzz 0.9 are missing) because the Hugging Face account ran out of monthly included credits (HTTP 402).
 
 ## What's inside
 

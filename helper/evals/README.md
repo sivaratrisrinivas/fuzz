@@ -66,6 +66,35 @@ Whether an echo should be shown or replaced by the Box fallback is a product dec
 of readable outputs needs a binary judge or human review on production-model traces. Word F1 and
 edit similarity (GS-T6) are not a substitute, since the target is a paraphrase.
 
+## Live Qwen check (72B stand-in, held-out)
+
+The production `Qwen/Qwen2.5-7B-Instruct` is not served for the Hugging Face token used here, so on
+2026-10-03 the same 12 held-out Memories x 4 Fuzz Levels were run on `Qwen/Qwen2.5-72B-Instruct`
+through Hugging Face Inference Providers (router, served by deepinfra), with the play messages and
+temperature 0.7. 43 of 48 traces came back (`traces_heldout_qwen72b.json`); the rest hit HTTP 402,
+"You have depleted your monthly included credits". Hand labels: `faithfulness_heldout_qwen72b.json`.
+
+| Fuzz level | Traces | Faithful | Unfaithful | Echo stars | Garbled | Blocked (task talk) |
+|---|---:|---:|---:|---:|---:|---:|
+| 0.0 | 11 | 11 | 0 | 0 | 0 | 0 |
+| 0.3 | 11 | 1 | 9 | 1 | 0 | 0 |
+| 0.6 | 11 | 0 | 8 | 2 | 1 | 0 |
+| 0.9 | 10 | 0 | 7 | 0 | 0 | 3 |
+
+- Format: the new pipeline showed all 40 readable outputs with no task talk and blocked all 3
+  task-talk outputs (each was about "the player" or "the endless fight"). The old parser would have
+  shown task talk or markers in 4 of 43.
+- `residual_fuzz` flagged the 3 echoes and none of the other 40 traces. The garbled output
+  (market-mango/0.6, letters with the stars removed) is not flagged.
+- Read failures: with nothing hidden the 72B rewrite is faithful every time (allam-2-7b: 5 of 11).
+  With 30% hidden it keeps the frame but swaps key nouns (power -> phone, tea -> teacher,
+  festival -> firefight, fruit seller -> detective, slipped out -> slept outside the gate). From 60%
+  hidden it writes an unrelated story (a beach, a storm, a man named Tony). Format checks cannot
+  catch any of these, so faithfulness still needs a judge or human review.
+- This is a 72B stand-in, not the production 7B; expect the 7B to do no better.
+
+These traces are not part of the CI gate (the gate uses the allam-2-7b labels in `baseline.json`).
+
 ## Commands
 
 ```bash
