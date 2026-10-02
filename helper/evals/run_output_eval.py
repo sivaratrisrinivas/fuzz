@@ -199,6 +199,28 @@ def load_heldout() -> list[dict] | None:
     return rows
 
 
+def faithfulness_report() -> dict | None:
+    """What the player actually reads on held-out traces, and whether the residual_fuzz flag finds echoes."""
+    path, traces = HERE / "faithfulness_heldout.json", HERE / "traces_heldout.json"
+    if not (path.exists() and traces.exists()):
+        return None
+    lab = json.loads(path.read_text())["labels"]
+    counts: dict[str, int] = {}
+    tp = fn = tn = fp = 0
+    for t in json.loads(traces.read_text())["trials"]:
+        key = f"{t['memory_id']}/{t['fuzz_level']}"
+        if key not in lab:
+            continue
+        memory, flags = new_pipeline(t["raw_output"])
+        counts[lab[key]] = counts.get(lab[key], 0) + 1
+        echo, flagged = lab[key] == "echo_fuzz", "residual_fuzz" in flags
+        tp += echo and flagged
+        fn += echo and not flagged
+        fp += flagged and not echo
+        tn += not echo and not flagged
+    return {"labels": counts, "residual_fuzz_flag": {"tp": tp, "fn": fn, "tn": tn, "fp": fp}}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--check", action="store_true")
@@ -209,6 +231,9 @@ def main() -> int:
     held = load_heldout()
     if held:
         report["heldout_real"] = {"n": len(held), **score_labeled(held)}
+    faith = faithfulness_report()
+    if faith:
+        report["heldout_faithfulness"] = faith
     cases = synthetic_cases()
     report["synthetic"] = {"n": len(cases), **score_synthetic(cases)}
 
@@ -222,6 +247,11 @@ def main() -> int:
                 m = r[name]
                 print(f"{key:13s} {name}: shown_usable {frac(m['shown_usable'])}, blocked_bad "
                       f"{frac(m['blocked_bad'])}, shown_with_chatter {frac(m['shown_with_chatter'])}")
+    if faith:
+        f = faith["residual_fuzz_flag"]
+        print(f"heldout shown outputs by hand label: {faith['labels']}")
+        print(f"residual_fuzz flag vs echo_fuzz label: caught {f['tp']}/{f['tp'] + f['fn']}, "
+              f"clean readable passed {f['tn']}/{f['tn'] + f['fp']}")
     for split in ("dev", "test"):
         s = report["synthetic"][split]
         print(f"synthetic {split:4s} old {frac(s['old'])}, new {frac(s['new'])}")
@@ -233,6 +263,13 @@ def main() -> int:
         base = json.loads((HERE / "baseline.json").read_text())
         problems = []
         for key, floors in base.items():
+            if key == "heldout_faithfulness":
+                f = report.get(key, {}).get("residual_fuzz_flag")
+                if f is None:
+                    problems.append(f"{key} missing")
+                elif f["tp"] < floors["min_echo_caught"] or f["fp"] > floors["max_readable_flagged"]:
+                    problems.append(f"{key} residual_fuzz flag {f}")
+                continue
             if key == "synthetic":
                 for split, floor in floors.items():
                     got = report["synthetic"][split]["new"]

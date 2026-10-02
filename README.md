@@ -150,6 +150,7 @@ Result files: `bench/gs-t32-before.json`, `bench/gs-t32-after.json`. Adapter: `t
 - 931 generated outputs with known answers that cover marker styles, code fences, missing final markers, repeated sections, trailing notes, and bad final text.
 - On held-out real traces, the old parser showed a clean Memory for 17 of 25 usable outputs and blocked 11 of 23 bad ones. The new parser and output checks show 24 of 25 and block 22 of 23. On the 132 dev traces: 63/97 and 21/35 before, 96/97 and 34/35 after.
 - The old parser showed task talk, prompt text, or step markers to the player in 40 of 132 dev traces and 18 of 48 held-out traces.
+- What the player reads on held-out traces, by hand label: 5 of 25 shown outputs are faithful, 8 swap or invent details, and 12 just echo the Fuzz stars. Format checks cannot catch invented details. The `residual_fuzz` flag finds all 12 echoes with no false flags.
 - CI runs `python evals/run_output_eval.py --check` and fails below `helper/evals/baseline.json`.
 - Not measured: reconstruction quality on a larger set. The live default model (`Qwen/Qwen2.5-7B-Instruct`) is not served by any provider enabled for the Hugging Face token used here, so no new 7B traces were collected.
 

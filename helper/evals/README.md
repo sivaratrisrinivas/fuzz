@@ -43,6 +43,29 @@ task talk (held-out exam-morning/0.9).
 The "shown with task talk" count for the new pipeline is 0 by construction, since the same rules
 decide what is blocked. The usable and blocked counts use the hand labels.
 
+## What the player reads (faithfulness, held-out)
+
+"Usable" above only means the output can be shown without task talk or markers. A second hand-label
+pass on the 25 held-out outputs the new pipeline shows (`faithfulness_heldout.json`) asks whether the
+text is a faithful reconstruction:
+
+| Label | Count of 25 |
+|---|---:|
+| faithful (keeps who, what, where, outcome) | 5 |
+| unfaithful (swaps or invents people, objects, events) | 8 |
+| echo_fuzz (shows the Fuzz itself, mostly stars) | 12 |
+
+At Fuzz 0.0 (nothing hidden), only 5 of 11 rewrites were faithful. Above Fuzz 0.0, 12 of 14
+outputs echoed the stars and 2 invented a new story. These are allam-2-7b outputs, not the
+production Qwen 7B, so they describe the eval's held-out model, not production. The point stands:
+format checks cannot tell a faithful Memory from an invented one.
+
+The existing non-blocking `residual_fuzz` flag matches the echo label exactly (12/12 caught, 13/13
+readable outputs not flagged), so production logs can count echoes. CI gates on that agreement.
+Whether an echo should be shown or replaced by the Box fallback is a product decision. Faithfulness
+of readable outputs needs a binary judge or human review on production-model traces. Word F1 and
+edit similarity (GS-T6) are not a substitute, since the target is a paraphrase.
+
 ## Commands
 
 ```bash
