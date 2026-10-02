@@ -5,14 +5,14 @@
 # Test harness uses pytest (listed); basic skeleton may exercise with unittest or pytest.
 # See parent PRD #1, issue #2, issue #5, handoff, ADR-0001, CONTEXT.md.
 
-fastapi>=0.110
-uvicorn[standard]>=0.29
-pytest>=8.0
-httpx>=0.27
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+pytest==9.1.1
+httpx==0.28.1
 
 # For Smart Robot one-call (issue #6): huggingface_hub provides InferenceClient.
 # Used by ReconstructCoordinator default model_caller (Qwen/Qwen2.5-7B-Instruct).
 # DEV: ZeroGPU / Pro / token for iteration (never dedicated nvidia-l4 in dev).
 # PROD path (follow-on): dedicated HF Inference Endpoint on nvidia-l4 (hourly, scale-to-zero).
 # See validate-smart-robot-on-dev.py, huggingface-zerogpu skill, and ADR-0001.
-huggingface_hub>=0.23
+huggingface_hub==2.1.1

@@ -34,7 +34,8 @@ _MARKER_LEAK = re.compile(
 _META = re.compile(
     r"\b(?:smart\s+robot|best\s+guess|quiet\s+rewrite|cleaning\s+steps?|fresh\s+clues?|feeling\s+lesson|"
     r"feeling\s+science|word\s+lesson|sand\s+drawing|endless\s+fight|exact\s+copy|creative\s+guessing|"
-    r"perfect\s+help|fuzz\s+levels?|reconstruct(?:ed|ing|ion)?|the\s+player|"
+    r"perfect\s+help|fuzz\s+levels?|reconstruct(?:ed|ing|ion)?|the\s+player|quiet\s+pass|"
+    r"i(?:'m|\s+am)\s+sorry,?\s+(?:but\s+)?i\s+can(?:'t|not)|i\s+can(?:'t|not)\s+help|"
     r"i\s+understand\s+the\s+instructions|here\s+is\s+(?:the|my)\s+(?:final|reconstructed))\b",
     re.IGNORECASE,
 )
