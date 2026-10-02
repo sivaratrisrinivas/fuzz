@@ -1,0 +1,30 @@
+{
+  "description": "Second hand-label pass on the 25 held-out traces the new pipeline shows to the player (agent-made, needs a human spot check). Labeled by reading the original Memory, the Final Fuzz and the shown text. faithful = a readable reconstruction that keeps who, what, where and the outcome of the original; wording may change. unfaithful = readable, but swaps or invents people, objects or events (e.g. librarian -> mother, gate -> fence, invented carousel). echo_fuzz = no reconstruction: the shown text is the Fuzz itself, mostly stars, often cut short. Held-out traces are from allam-2-7b, not the production Qwen 7B.",
+  "labels": {
+    "train-window/0.0": "faithful",
+    "train-window/0.6": "echo_fuzz",
+    "first-bike/0.0": "unfaithful",
+    "exam-morning/0.0": "unfaithful",
+    "exam-morning/0.3": "echo_fuzz",
+    "exam-morning/0.6": "echo_fuzz",
+    "exam-morning/0.9": "echo_fuzz",
+    "market-mango/0.0": "faithful",
+    "market-mango/0.9": "echo_fuzz",
+    "snow-day/0.0": "faithful",
+    "lost-dog/0.0": "unfaithful",
+    "lost-dog/0.3": "echo_fuzz",
+    "lost-dog/0.6": "echo_fuzz",
+    "lost-dog/0.9": "echo_fuzz",
+    "radio-cricket/0.0": "unfaithful",
+    "radio-cricket/0.3": "unfaithful",
+    "radio-cricket/0.6": "echo_fuzz",
+    "beach-shell/0.0": "faithful",
+    "beach-shell/0.3": "unfaithful",
+    "beach-shell/0.9": "echo_fuzz",
+    "hostel-night/0.0": "faithful",
+    "festival-lamps/0.0": "unfaithful",
+    "library-card/0.0": "unfaithful",
+    "library-card/0.9": "echo_fuzz",
+    "kite-roof/0.9": "echo_fuzz"
+  }
+}

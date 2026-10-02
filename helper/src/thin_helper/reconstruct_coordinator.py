@@ -30,9 +30,11 @@ docs/adr/0001-... , CONTEXT.md , box/src/fuzz-simulator.ts (FightEndData contrac
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import Optional, Any
 
+from .output_check import clean_reconstruction, rejected
 from .prompt_constructor import PromptConstructor
 from .smart_robot import call_play_smart_robot, extract_chat_content
 
@@ -90,50 +92,48 @@ class ReconstructCoordinator:
         fresh_clues = fight_end_data.get("fresh_clues", [])
         return self.prompt_constructor.build_prompt(final_fuzz, fresh_clues)
 
+    # A marker on its own line. Tolerates what real traces showed: "===\nSTEP 1 ===",
+    # lowercase, missing spaces, markdown headers or bold, and a trailing colon.
+    _MARKER = re.compile(
+        r"^[ \t]*(?:#{1,6}[ \t]*|\*\*)?(?:={2,}[ \t]*\n?[ \t]*)?"
+        r"(STEP[ \t]*([1-4])|RECONSTRUCTED[ \t]+MEMORY)"
+        r"[ \t]*(?:={2,})?[ \t]*(?:\*\*)?[ \t]*:?[ \t]*$",
+        re.IGNORECASE | re.MULTILINE,
+    )
+
     def parse_reconstruction(self, raw_output: str) -> dict:
         """Parse the locked marked format produced by the Smart Robot (4 Cleaning Steps + final).
 
-        Returns dict with keys: step1, step2, step3, step4, reconstructed_memory.
-        Uses a robust marker-finding approach: finds ALL markers in order and extracts
-        content between consecutive markers. Handles format variations like missing newlines,
-        markdown code fences, and extra whitespace. Falls back to raw output if no markers found.
+        Returns dict with keys: step1, step2, step3, step4, reconstructed_memory (only the ones found).
+        Marker matching is tolerant of the variants seen in real traces. When a section repeats,
+        the last one wins. When the RECONSTRUCTED MEMORY marker is missing (usually the model ran
+        out of tokens after STEP 4), STEP 4 is used and "from_step4" is set. With no markers at
+        all, the cleaned text is returned and output_check decides whether it is usable.
         """
-        import re
         result: dict[str, str] = {}
+        if not isinstance(raw_output, str):
+            return {"reconstructed_memory": ""}
 
-        # Normalize: strip whitespace, remove markdown code fences
         cleaned = raw_output.strip()
-        cleaned = re.sub(r'^```(?:text|markdown)?\n?|```$', '', cleaned, flags=re.IGNORECASE).strip()
+        cleaned = re.sub(r"^```[a-zA-Z]*[ \t]*\n?", "", cleaned)
+        cleaned = re.sub(r"\n?```[ \t]*$", "", cleaned).strip()
 
-        # Find all markers in order of appearance
-        pattern = r"=== (?:STEP \d+|RECONSTRUCTED MEMORY) ==="
-        matches = list(re.finditer(pattern, cleaned, re.IGNORECASE))
-
+        matches = list(self._MARKER.finditer(cleaned))
         if not matches:
-            # No markers at all — return clean text as best-effort reconstruction
-            cleaned = re.sub(r'\n---+[\s\S]*$', '', cleaned).strip()
-            result["reconstructed_memory"] = cleaned
+            result["reconstructed_memory"] = re.sub(r"\n---+[\s\S]*$", "", cleaned).strip()
             return result
 
         for i, match in enumerate(matches):
-            marker = match.group(0)
-            start = match.end()
             end = matches[i + 1].start() if i + 1 < len(matches) else len(cleaned)
-            content = cleaned[start:end].strip()
+            content = cleaned[match.end() : end].strip()
+            if match.group(2):
+                result[f"step{match.group(2)}"] = content
+            else:
+                result["reconstructed_memory"] = re.sub(r"\n---+[\s\S]*$", "", content).strip()
 
-            upper = marker.upper()
-            if "STEP 1" in upper:
-                result["step1"] = content
-            elif "STEP 2" in upper:
-                result["step2"] = content
-            elif "STEP 3" in upper:
-                result["step3"] = content
-            elif "STEP 4" in upper:
-                result["step4"] = content
-            elif "RECONSTRUCTED MEMORY" in upper:
-                content = re.sub(r'\n---+[\s\S]*$', '', content).strip()
-                result["reconstructed_memory"] = content
-
+        if not result.get("reconstructed_memory") and result.get("step4"):
+            result["reconstructed_memory"] = re.sub(r"\n---+[\s\S]*$", "", result["step4"]).strip()
+            result["from_step4"] = "1"
         return result
 
     def reconstruct_from_fight_end(self, fight_end_data: dict, model_output: Optional[str] = None) -> dict:
@@ -158,10 +158,16 @@ class ReconstructCoordinator:
                 raw_output = self._model_caller(prompt_built)
 
             parsed = self.parse_reconstruction(raw_output)
+            memory, flags = clean_reconstruction(parsed)
+            if rejected(flags):
+                # Do not show prompt text or task chatter as a Memory. Empty lets the Box use its fallback.
+                logger.info("reconstruction rejected by output check: %s", ",".join(flags))
+                memory = ""
 
             # Return structure for the endpoint / callers. Include a (truncated) preview. Never include full input data.
             result = {
-                "reconstructed_memory": parsed.get("reconstructed_memory", ""),
+                "reconstructed_memory": memory,
+                "quality_flags": flags,
                 "steps": {
                     "step1": parsed.get("step1", ""),
                     "step2": parsed.get("step2", ""),

@@ -23,7 +23,7 @@ Local two-process:
 
 ```bash
 cd box && bun install && bun dev          # http://localhost:3000
-cd helper && pip install -r requirements.txt && python -m uvicorn src.thin_helper.main:app --reload
+cd helper && pip install -r requirements.txt -c constraints.txt && python -m uvicorn src.thin_helper.main:app --reload
 ```
 
 One-command prod-like:
@@ -141,6 +141,18 @@ Task-specific Reconstructing adapter on `Qwen/Qwen2.5-0.5B-Instruct`. Same locke
 Word F1 rose on Fuzz 0.0–0.7. Failures fell 12/44 → 8/44. High-Fuzz (0.8–1.0) did not improve; Fuzz 1.0 after is still prompt-boilerplate regurgitation. Exact match vs original went 1/44 → 2/44 (both at Fuzz 0.0). That is **not** the Quiet Rewrite goal — the 0.5B adapter copies more of an intact Memory instead of paraphrasing. Exact match 0 remains the product intent; this small CPU adapter does not achieve it. Default live model stays `Qwen/Qwen2.5-7B-Instruct` (ADR-0002). Short bakeoff: 0.5B was chosen because it trains and serves on this CPU; 7B QLoRA is the optional GPU path, not used for these numbers.
 
 Result files: `bench/gs-t32-before.json`, `bench/gs-t32-after.json`. Adapter: `train/artifacts/qwen25-0.5b-reconstruct-lora`.
+
+## Evals
+
+`helper/evals/` scores what the player actually sees after Reconstructing: the parsed Reconstructed Memory. Details: `helper/evals/README.md`.
+
+- 180 real Smart Robot traces, labeled by hand: 132 from the GS-T6 and GS-T32 runs (used to write the rules) and 48 held-out traces on 12 new Memories from a model the rules never saw.
+- 931 generated outputs with known answers that cover marker styles, code fences, missing final markers, repeated sections, trailing notes, and bad final text.
+- On held-out real traces, the old parser showed a clean Memory for 17 of 25 usable outputs and blocked 11 of 23 bad ones. The new parser and output checks show 24 of 25 and block 22 of 23. On the 132 dev traces: 63/97 and 21/35 before, 96/97 and 34/35 after.
+- The old parser showed task talk, prompt text, or step markers to the player in 40 of 132 dev traces and 18 of 48 held-out traces.
+- What the player reads on held-out traces, by hand label: 5 of 25 shown outputs are faithful, 8 swap or invent details, and 12 just echo the Fuzz stars. Format checks cannot catch invented details. The `residual_fuzz` flag finds all 12 echoes with no false flags.
+- CI runs `python evals/run_output_eval.py --check` and fails below `helper/evals/baseline.json`.
+- Not measured: reconstruction quality on a larger set. The live default model (`Qwen/Qwen2.5-7B-Instruct`) is not served by any provider enabled for the Hugging Face token used here, so no new 7B traces were collected.
 
 ## What's inside
 
